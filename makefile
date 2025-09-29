@@ -1,0 +1,59 @@
+TARGET = main
+FLAGS = -Wall -std=c99 -flto -O3 -pedantic -march=native -ffast-math -funroll-loops -g
+
+SRC_DIR = src
+INC_DIR = include
+OBJ_DIR = obj
+
+CC = gcc
+
+SRC = $(wildcard $(SRC_DIR)/*.c)
+OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
+
+ifeq ($(OS),Windows_NT)
+    RMDIR = rmdir /s /q
+    RMFILE = del /f /q
+    MKDIR = mkdir
+    SDL_CFLAGS = -IC:/msys64/mingw64/include
+    SDL_LDFLAGS = -LC:/msys64/mingw64/lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+    TARGET = main.exe
+    # Add the path to the SDL2.dll here
+    PATH_TO_DLL = C:/msys64/mingw64/bin
+    # Ensure the DLL is in the PATH when running
+    SHELL := cmd.exe
+    PATH := $(PATH);$(PATH_TO_DLL)
+else
+    RMDIR = rm -rf
+    RMFILE = rm -f
+    MKDIR = mkdir -p
+    SDL_CFLAGS = $(shell sdl2-config --cflags)
+    SDL_LDFLAGS = $(shell sdl2-config --libs) -lSDL2_image -lm
+endif
+
+
+CFLAGS = -I$(INC_DIR)
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CC) -o $(TARGET) $^ $(SDL_LDFLAGS) $(FLAGS)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $(SDL_CFLAGS) $(FLAGS) -c $< -o $@
+
+$(OBJ_DIR):
+	$(MKDIR) $(OBJ_DIR)
+
+run: $(TARGET)
+	./$(TARGET)
+
+clean:
+ifeq ($(OS),Windows_NT)
+	-$(RMFILE) $(TARGET)
+	-$(RMDIR) $(OBJ_DIR)
+else
+	-$(RMFILE) main main.exe
+	-$(RMDIR) $(OBJ_DIR)
+endif
+
+.PHONY: all clean
