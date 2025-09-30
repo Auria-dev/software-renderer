@@ -1,5 +1,6 @@
 #include "main.h"
 #include "graphics.h"
+#include <SDL2/SDL_keycode.h>
 
 #define RENDER_WIDTH 640
 #define RENDER_HEIGHT 480
@@ -28,6 +29,9 @@ int main(int argc, char *argv[]) {
                 } break;
                 case SDL_WINDOWEVENT: {
                     if (e.window.event == SDL_WINDOWEVENT_RESIZED) window_resize();
+                } break;
+                case SDL_KEYUP: {
+                    if (e.key.keysym.sym == SDLK_ESCAPE) running = false;
                 } break;
             }
         }
