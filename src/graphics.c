@@ -1,8 +1,15 @@
 #include "graphics.h"
 
-extern viewport_t g_viewport;
+framebuffer_t framebuffer_init(int width, int height) {
+  framebuffer_t fb;
+  fb.width = width;
+  fb.height = height;
+  fb.color_buffer = calloc(fb.width * fb.height, sizeof(u32));
+  fb.depth_buffer = calloc(fb.width * fb.height, sizeof(float));
+  return fb;
+}
 
-void draw_pixel(int x, int y, u32 c) {
-  if (x<0 || y<0 || x>g_viewport.width || y>g_viewport.height) return;
-  g_viewport.color_buffer[y * g_viewport.width + x] = c;  
+void draw_pixel(render_context *ctx, int x, int y, u32 c) {
+  if (x < 0 || x >= ctx->framebuffer.width || y < 0 || y >= ctx->framebuffer.height) return;
+  ctx->framebuffer.color_buffer[y * ctx->framebuffer.width + x] = c;
 }

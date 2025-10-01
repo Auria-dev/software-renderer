@@ -1,8 +1,7 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
-#include "platform.h"
-#include "texture.h"
+ #include "texture.h"
 
 enum {
   GBUFFER_INDEX,
@@ -26,14 +25,13 @@ typedef struct render_context {
   mat4 world_matrix;
   mat4 model_matrix;
 
-  int width, height;
-
   framebuffer_t framebuffer;
 
   buffer_t vertex_buffer;
   buffer_t index_buffer;
   
   texture_manager_t texture_manager;
+  // TODO: shader program
 
   bool depth_test;
   bool blend_test;
@@ -41,6 +39,9 @@ typedef struct render_context {
 
 } render_context;
 
-void draw_pixel(int x, int y, u32 c);
+// drawing functions
+void draw_pixel(render_context *ctx, int x, int y, u32 c);
+framebuffer_t framebuffer_init(int width, int height);
+
 
 #endif

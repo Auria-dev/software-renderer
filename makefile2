@@ -1,4 +1,3 @@
-
 TARGET = main
 FLAGS = -Wall -std=c99 -flto -O3 -pedantic -march=native -ffast-math -funroll-loops -g
 
@@ -8,38 +7,37 @@ OBJ_DIR = obj
 
 CC = gcc
 
-COMMON_SRC = $(filter-out $(SRC_DIR)/platform_%.c, $(wildcard $(SRC_DIR)/*.c))
+SRC = $(wildcard $(SRC_DIR)/*.c)
+OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
 ifeq ($(OS),Windows_NT)
-    BACKEND_SRC = $(SRC_DIR)/platform_win32.c
+	BACKEND_SRC = $(SRC_DIR)/platform_win32.c
     RMDIR = rmdir /s /q
     RMFILE = del /f /q
     MKDIR = mkdir
     TARGET = main.exe
-    SYS_LDFLAGS = -lgdi32 -luser32
-    SYS_CFLAGS =
+    SHELL := cmd.exe
+    PATH_TO_DLL = C:/msys64/mingw64/bin
+    PATH := $(PATH);$(PATH_TO_DLL)
+    PAL_LDFLAGS = -lm
 else
-    BACKEND_SRC = $(SRC_DIR)/platform_x11.c
+	BACKEND_SRC = $(SRC_DIR)/platform_x11.c
     RMDIR = rm -rf
     RMFILE = rm -f
     MKDIR = mkdir -p
-    TARGET = main
-    SYS_LDFLAGS = -lX11 -lXext
-    SYS_CFLAGS =
+    PAL_LDFLAGS = -lX11 -lm
 endif
 
-SRC = $(COMMON_SRC) $(BACKEND_SRC)
-OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
-CFLAGS = -I$(INC_DIR) $(SYS_CFLAGS)
+CFLAGS = -I$(INC_DIR)
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CC) -o $(TARGET) $^ $(SYS_LDFLAGS) $(FLAGS)
+	$(CC) -o $(TARGET) $^ $(SDL_LDFLAGS) $(FLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) $(FLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(PAL_LDFLAGS) $(FLAGS) -c $< -o $@
 
 $(OBJ_DIR):
 	$(MKDIR) $(OBJ_DIR)
