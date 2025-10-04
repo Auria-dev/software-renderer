@@ -2,6 +2,7 @@
 main
 main.exe
 
+.ignore
 *~
 *.swp
 *.bak

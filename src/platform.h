@@ -3,6 +3,8 @@
 
 #include "c3m.h"
 #include "graphics.h"
+#include <stdio.h>
+
 enum {
     EVENT_WINDOW_CLOSE,         // user clicked close / requested quit
     EVENT_WINDOW_RESIZE,        // window resized
@@ -84,11 +86,10 @@ typedef struct {
 typedef struct window_t window_t;
 window_t* window_create(const char* title, int width, int height, void (*event_callback)(int event, void* data));
 void window_poll_events(window_t* window);
+void window_blit(window_t *w);
 void window_destroy(window_t* window);
 
-void window_create_image(window_t *w, int width, int height);
-void window_draw_framebuffer(window_t *w, render_context *ctx);
-
+void window_bind_framebuffer(window_t *w, framebuffer_t *fb);
 // TODO: window_render window_resize window_rename? and mouse capturing with events?
 
 #endif

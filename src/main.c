@@ -36,13 +36,16 @@ int main(int argc, char *argv[]) {
   if (!win) { fprintf(stderr, "Failed to create window\n"); return 1; }
 
   render_context ctx = {0};
-  ctx.framebuffer = framebuffer_init(640, 480);
-  window_create_image(win, ctx.framebuffer.width, ctx.framebuffer.height);
+  ctx.framebuffer = framebuffer_init(640/2, 480/2);
+  // window_create_image(win, ctx.framebuffer.width, ctx.framebuffer.height);
+
+  window_bind_framebuffer(win, &ctx.framebuffer);
   
   running = true;
   struct timespec last_time;
   clock_gettime(CLOCK_MONOTONIC, &last_time);
   int frames = 0;
+
 
   while (running) {
     window_poll_events(win);
@@ -50,16 +53,17 @@ int main(int argc, char *argv[]) {
     static int frame = 0;
     memset(ctx.framebuffer.color_buffer,(int)0xff222222, ctx.framebuffer.width*ctx.framebuffer.height*sizeof(u32));
 
-    for (int x=0;x<640;x++) {
-      for (int y=0;y<480;y++) {
-        u32 c = 0xff << 24 | x%255<<16 | y%255<<8 | 0x00;
-        draw_pixel(&ctx, x,y, c);
-      }
-    }
-    draw_pixel(&ctx, mousepos.x-5,mousepos.y-5, 0xff00ffff);
+    // for (int x=0;x<640;x++) {
+    //   for (int y=0;y<480;y++) {
+    //     u32 c = 0xff << 24 | x%255<<16 | y%255<<8 | 0xff;
+    //     draw_pixel(&ctx, x,y, c);
+    //   }
+    // }
+
+    draw_pixel(&ctx, mousepos.x,mousepos.y, 0xff00ffff);
 
     frame++;
-    window_draw_framebuffer(win, &ctx);
+    window_blit(win);
     frames++;
 
     struct timespec now;
@@ -71,6 +75,8 @@ int main(int argc, char *argv[]) {
       last_time = now;
     }
   }
+
+
 
   window_destroy(win);
   return 0;

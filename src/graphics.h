@@ -42,6 +42,6 @@ typedef struct render_context {
 // drawing functions
 void draw_pixel(render_context *ctx, int x, int y, u32 c);
 framebuffer_t framebuffer_init(int width, int height);
-
+render_context render_context_init();
 
 #endif

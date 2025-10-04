@@ -1,6 +1,7 @@
 #include "graphics.h"
 #include "platform.h"
 
+#ifndef _WIN32
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
@@ -21,6 +22,9 @@ struct window_t {
   XShmSegmentInfo shminfo;
   bool use_shm;
   GC gc;
+
+  int fb_width;
+  int fb_height;
 };
 
 window_t *window_create(const char *title, int width, int height, void (*event_callback)(int event, void *data)) {
@@ -41,7 +45,6 @@ window_t *window_create(const char *title, int width, int height, void (*event_c
   
   XSetWMProtocols(w->display, w->window, &w->wm_delete_window, 1);
   XMapWindow(w->display, w->window);
-
 
   w->event_callback = event_callback;
   return w;
@@ -74,7 +77,7 @@ void window_create_image(window_t *w, int width, int height) {
     }
 }
 
-void window_draw_framebuffer(window_t *w, render_context *ctx) {
+void window_blit(window_t *w, render_context *ctx) {
     u32 *src = ctx->framebuffer.color_buffer;
     int w_fb = ctx->framebuffer.width;
     int h_fb = ctx->framebuffer.height;
@@ -86,6 +89,8 @@ void window_draw_framebuffer(window_t *w, render_context *ctx) {
         memcpy(dst + y * bytes_per_line, src + y * w_fb, w_fb * sizeof(u32));
     }
 
+    XWindowAttributes atb;
+    XGetWindowAttributes(w->display, w->window, &atb);
     if (w->use_shm) XShmPutImage(w->display, w->window, w->gc, w->ximage, 0, 0, 0, 0, w_fb, h_fb, True);
     else XPutImage(w->display, w->window, w->gc, w->ximage, 0, 0, 0, 0, w_fb, h_fb);
 
@@ -212,3 +217,5 @@ void window_destroy(window_t *w) {
   XDestroyWindow(w->display, w->window);
   XCloseDisplay(w->display);
 }
+
+#endif
