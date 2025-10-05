@@ -1,7 +1,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#define _POSIX_C_SOURCE 199309L
+#define _POSIX_C_SOURCE 199309L // for clock_gettime
 #include "c3m.h"
 #include "platform.h"
 #include "graphics.h"

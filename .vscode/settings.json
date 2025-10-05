@@ -2,7 +2,10 @@
     "files.associations": {
         "math.h": "c",
         "main.h": "c",
-        "platform.h": "c"
+        "platform.h": "c",
+        "string.h": "c",
+        "time.h": "c",
+        "unistd.h": "c"
     },
     "cmake.sourceDirectory": "D:/Projects/software_renderer/software-renderer"
 }

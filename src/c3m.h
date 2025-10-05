@@ -1,6 +1,10 @@
 #ifndef C3M_H
 #define C3M_H
 
+// C 3D Math library
+// Uses column-major matrices
+// Vectors are treated as column vectors
+
 #include <stdint.h>
 #include <float.h>
 #include <stdbool.h>

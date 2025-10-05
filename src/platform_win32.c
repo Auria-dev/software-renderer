@@ -196,7 +196,6 @@ void window_blit(window_t *w) {
     w->destRect.right = w->destRect.left + newW;
     w->destRect.bottom = w->destRect.top + newH;
 
-    HBRUSH black = (HBRUSH)GetStockObject(BLACK_BRUSH);
     SetBkColor(hdc, RGB(0, 0, 0));
 
     RECT top_bar = {client.left, client.top, client.right, w->destRect.top};

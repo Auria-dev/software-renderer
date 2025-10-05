@@ -12,8 +12,8 @@ COMMON_SRC = $(filter-out $(SRC_DIR)/platform_%.c, $(wildcard $(SRC_DIR)/*.c))
 
 ifeq ($(OS),Windows_NT)
     BACKEND_SRC = $(SRC_DIR)/platform_win32.c
-    RMDIR = rmdir /s /q
-    RMFILE = rm
+    RMDIR = Remove-Item -Recurse -Force -Path
+    RMFILE = Remove-Item -Force -Path
     MKDIR = mkdir
     TARGET = main.exe
     SYS_LDFLAGS = -lgdi32 -luser32
