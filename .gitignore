@@ -3,6 +3,7 @@ main
 main.exe
 
 .ignore
+.vscode
 *~
 *.swp
 *.bak

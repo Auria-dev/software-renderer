@@ -170,6 +170,10 @@ vec3 vec3_orthogonal(vec3 v) {
   }
 } // returns any unit vector orthogonal to v
 
+vec3  vec4_to_vec3(vec4 v) {
+  return (vec3) {v.x, v.y, v.z};
+}
+
 vec4 vec4_new(float x, float y, float z, float w) {
   return (vec4) {x,y,z,w};
 }
@@ -211,6 +215,10 @@ vec4 vec4_normalize(vec4 v) {
 
 vec4 vec4_lerp(vec4 a, vec4 b, float t) {
   return vec4_add(vec4_scale(a, 1.0f - t), vec4_scale(b, t));
+}
+
+vec4  vec3_to_vec4(vec3 v) {
+  return (vec4) {v.x, v.y, v.z, 1.0f};
 }
 
 quat quat_new(float x, float y, float z, float w) {

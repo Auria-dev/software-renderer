@@ -35,8 +35,7 @@ static keycode_t vk_to_keycode(WPARAM vk) {
         case VK_DOWN: return KEY_DOWN;
         case VK_LEFT: return KEY_LEFT;
         case VK_RIGHT: return KEY_RIGHT;
-        case VK_LSHIFT: return KEY_LSHIFT;
-        case VK_RSHIFT: return KEY_RSHIFT;
+        case VK_SHIFT: return KEY_SHIFT;
         case VK_LCONTROL: return KEY_LCTRL;
         case VK_RCONTROL: return KEY_RCTRL;
         case VK_TAB: return KEY_TAB;
@@ -419,6 +418,11 @@ static LRESULT CALLBACK platform_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPA
     }
 
     return 0;
+}
+
+void window_set_title(window_t *w, const char* title) {
+    if (!w || !w->hwnd) return;
+    SetWindowTextA(w->hwnd, title);
 }
 
 #endif // _WIN32

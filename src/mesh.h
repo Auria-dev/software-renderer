@@ -1,7 +1,7 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "c3m.h"
+#include "vertex.h"
 
 typedef struct {
     u32* indices;
@@ -10,9 +10,7 @@ typedef struct {
 } submesh_t;
 
 typedef struct {
-    vec3* vertices;
-    vec3* normals;
-    vec2* uvs;
+    vertex_t* vertices;
     int vertex_count;
 
     submesh_t* submeshes;

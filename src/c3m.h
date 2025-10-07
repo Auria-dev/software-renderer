@@ -2,8 +2,7 @@
 #define C3M_H
 
 // C 3D Math library
-// Uses column-major matrices
-// Vectors are treated as column vectors
+// column-major matrices
 
 #include <stdint.h>
 #include <float.h>
@@ -34,6 +33,14 @@ typedef struct {
 typedef struct {
     float m[4][4];
 } mat4;
+
+// float macro functions
+#define minf(a,b) ((a) < (b) ? (a) : (b))
+#define maxf(a,b) ((a) > (b) ? (a) : (b))
+#define clampf(v, lo, hi) (minf(maxf(v, lo), hi))
+#define lerpf(a, b, t) ((a) * (1.0f - (t)) + (b) * (t))
+#define deg_to_rad(deg) ((deg) * (M_PI / 180.0f))
+#define rad_to_deg(rad) ((rad) * (180.0f / M_PI))
 
 vec2  vec2_new(float x, float y);
 vec2  vec2_add(vec2 a, vec2 b);
@@ -71,6 +78,7 @@ vec3  vec3_clone(vec3* v);
 vec3  vec3_min(vec3 a, vec3 b);
 vec3  vec3_max(vec3 a, vec3 b);
 vec3  vec3_orthogonal(vec3 v);
+vec3  vec4_to_vec3(vec4 v);
 
 vec4  vec4_new(float x, float y, float z, float w);
 vec4  vec4_add(vec4 a, vec4 b);
@@ -81,6 +89,7 @@ float vec4_len_sq(vec4 v);
 float vec4_len(vec4 v);
 vec4  vec4_normalize(vec4 v);
 vec4  vec4_lerp(vec4 a, vec4 b, float t);
+vec4  vec3_to_vec4(vec3 v);
 
 quat  quat_new(float x, float y, float z, float w);
 quat  quat_identity();

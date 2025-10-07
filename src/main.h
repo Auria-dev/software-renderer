@@ -5,6 +5,9 @@
 #include "c3m.h"
 #include "platform.h"
 #include "graphics.h"
+#include "loader.h"
+#include "vertex.h"
+#include "mesh.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

@@ -1,6 +1,8 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
+#include "c3m.h"
+#include "vertex.h"
 #include "texture.h"
 
 enum {
@@ -14,6 +16,24 @@ typedef struct {
   u32    type;
 } buffer_t;
 
+enum {
+    FRUSTUM_LEFT,
+    FRUSTUM_RIGHT,
+    FRUSTUM_TOP,
+    FRUSTUM_BOTTOM,
+    FRUSTUM_NEAR,
+    FRUSTUM_FAR
+};
+
+typedef struct {
+    vec3 point;
+    vec3 normal;
+} clipping_plane_t;
+
+typedef struct {
+    clipping_plane_t planes[6];
+} frustum_t;
+
 typedef struct {
   u32* color_buffer;
   float* depth_buffer;
@@ -24,6 +44,8 @@ typedef struct render_context {
   mat4 projection_matrix;
   mat4 world_matrix;
   mat4 view_matrix;
+
+  frustum_t frustum;
 
   framebuffer_t framebuffer;
 
@@ -43,8 +65,11 @@ typedef struct render_context {
 
 } render_context;
 
-// drawing functions
+
 void draw_pixel(render_context *ctx, int x, int y, u32 c);
+
+framebuffer_t framebuffer_init(int width, int height);
+frustum_t frustum_init(float fov, float aspect_ratio, float clipping_near, float clipping_far);
 
 render_context render_context_init(
     int width, int height,
@@ -52,11 +77,15 @@ render_context render_context_init(
     vec3 cam_pos, vec3 cam_target, vec3 cam_up,
     bool enable_depth_test, bool enable_blend_test, bool enable_cull_face);
 
-framebuffer_t framebuffer_init(int width, int height);
+void g_update_projection_matrix(render_context *ctx, float fov, float ar);
+void g_update_view_matrix(render_context *ctx, mat4 view);
+void g_update_world_matrix(render_context *ctx, vec3 position, vec3 rotation, vec3 scale);
 
 void g_bind_material(render_context *ctx, int material_id);
 void g_bind_buffer(render_context *ctx, u32 type, void* data, size_t size);
 void g_buffer_data(render_context *ctx, u32 type, void* data, size_t size);
+#include "clipping.h"
+
 void g_draw_elements(render_context *ctx, u32 count, u32* indices);
 
 #endif
