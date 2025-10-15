@@ -53,7 +53,7 @@ void handle_event(int event, void *data) {
 }
 
 int main(int argc, char *argv[]) {
-    window_t *win = window_create("Hello :D", 640, 480, handle_event);
+    window_t *win = window_create("Hello :D", 1280, 720, handle_event);
     if (!win) { fprintf(stderr, "Failed to create window\n"); return 1; }
 
     render_context ctx = render_context_init(
@@ -64,9 +64,15 @@ int main(int argc, char *argv[]) {
     );
     window_bind_framebuffer(win, &ctx.framebuffer);
 
-    // load model
-    // mesh_t mymesh = load_mesh("assets/meshes/cube.obj", &ctx.vertex_buffer, &ctx.index_buffer); // also loads the MTL.
+    texture_manager_t texture_manager = tm_init();
     
+    mesh_t mymodel = {0};
+    load_obj("assets/models/monkey.obj", &mymodel, &texture_manager);
+
+    mymodel.position = (vec3){0,0,0};
+    mymodel.rotation = (vec3){0,0,0};
+    mymodel.scale    = (vec3){1,1,1};
+
     // cube mesh hardcoded
     mesh_t mymesh = {0};
     mymesh.vertex_count = 8;
@@ -82,6 +88,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < mymesh.vertex_count; i++) {
         mymesh.vertices[i].normal = vec3_zero();
         mymesh.vertices[i].texcoord = (vec2){0,0};
+        mymesh.vertices[i].color = 0xffffffff;
     }
     mymesh.submesh_count = 1;
     mymesh.submeshes = malloc(sizeof(submesh_t) * mymesh.submesh_count);
@@ -89,17 +96,17 @@ int main(int argc, char *argv[]) {
     mymesh.submeshes[0].index_count = 36;
     mymesh.submeshes[0].indices = malloc(sizeof(u32) * mymesh.submeshes[0].index_count);
     u32 cube_indices[] = {
-        0,1,2,  2,3,0,
-        1,5,6,  6,2,1,
-        5,4,7,  7,6,5,
-        4,0,3,  3,7,4,
-        3,2,6,  6,7,3,
-        4,5,1,  1,0,4
+        0,2,1,  2,0,3,
+        1,6,5,  6,1,2,
+        5,7,4,  7,5,6,
+        4,3,0,  3,4,7,
+        3,6,2,  6,3,7,
+        4,1,5,  1,4,0
     };
     memcpy(mymesh.submeshes[0].indices, cube_indices, sizeof(u32) * mymesh.submeshes[0].index_count);
-    mymesh.position = (vec3){0,0,0};
+    mymesh.position = (vec3){0,3,0};
     mymesh.rotation = (vec3){0,0,0};
-    mymesh.scale    = (vec3){1,1,1};
+    mymesh.scale    = (vec3){5,1,1};
     
     // setup render context matrices
     g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
@@ -120,18 +127,29 @@ int main(int argc, char *argv[]) {
         if (movement.down)     cam_pos.y -= 5.0f * delta_time;
 
         g_update_view_matrix(&ctx, mat4_look_at(cam_pos, vec3_sub(cam_pos, vec3_new(0,0,-1)), (vec3){0,1,0})); // up is just +Y cause no rotation yet
-        g_update_world_matrix(&ctx, mymesh.position, mymesh.rotation, mymesh.scale);
 
         mymesh.rotation.y += 0.5f * delta_time;
         mymesh.rotation.x += 0.1f * delta_time;
 
         memset(ctx.framebuffer.color_buffer, (int)0xff222222, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
 
-        // draw the mesh
+        // draw test mesh
+        g_update_world_matrix(&ctx, mymesh.position, mymesh.rotation, mymesh.scale);
         for (int i = 0; i < mymesh.submesh_count; i++) {
             submesh_t *sm = &mymesh.submeshes[i];
             g_bind_material(&ctx, sm->material_id);
             g_bind_buffer(&ctx, GBUFFER_VERTEX, mymesh.vertices, mymesh.vertex_count * sizeof(vertex_t));
+            g_bind_buffer(&ctx, GBUFFER_INDEX, sm->indices, sm->index_count * sizeof(u32));
+
+            g_draw_elements(&ctx, sm->index_count, sm->indices);
+        }
+
+        // draw loaded model
+        g_update_world_matrix(&ctx, mymodel.position, mymodel.rotation, mymodel.scale);
+        for (int i = 0; i < mymodel.submesh_count; i++) {
+            submesh_t *sm = &mymodel.submeshes[i];
+            g_bind_material(&ctx, sm->material_id);
+            g_bind_buffer(&ctx, GBUFFER_VERTEX, mymodel.vertices, mymodel.vertex_count * sizeof(vertex_t));
             g_bind_buffer(&ctx, GBUFFER_INDEX, sm->indices, sm->index_count * sizeof(u32));
 
             g_draw_elements(&ctx, sm->index_count, sm->indices);
@@ -143,10 +161,7 @@ int main(int argc, char *argv[]) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
 
-        // calculate delta time in seconds
         delta_time = (now.tv_sec - last_time.tv_sec) + (now.tv_nsec - last_time.tv_nsec) * 1e-9;
-
-        // update frame counter and title once per second
         static double fps_timer = 0.0;
         fps_timer += delta_time;
         frames++;
@@ -162,6 +177,7 @@ int main(int argc, char *argv[]) {
         last_time = now;
     }
 
+    tm_free(&texture_manager);
     window_destroy(win);
     return 0;
 }

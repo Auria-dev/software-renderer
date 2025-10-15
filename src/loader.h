@@ -10,12 +10,19 @@
 #include <string.h>
 #include <ctype.h>
 
-void load_mesh(void);
+typedef struct {
+    char name[128];
+    int texture_id;
+} material_lookup_t;
+
+mesh_t load_mesh(const char *filepath);
 void parse_obj_file(void);
 void parse_mtl_file(void);
+void load_obj(const char* path, mesh_t* mesh, texture_manager_t* tm);
+int load_mtl(const char* mtl_path, const char* obj_dir, texture_manager_t* tm, material_lookup_t** lookup_table_out);
 
-void parse_png_file(void);
-void parse_jpg_file(void);
-void parse_bmp_file(void);
+texture_t parse_png_file(const char *filepath);
+texture_t parse_jpg_file(const char *filepath);
+texture_t parse_bmp_file(const char *filepath);
 
 #endif

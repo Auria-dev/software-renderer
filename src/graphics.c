@@ -128,10 +128,10 @@ void g_update_world_matrix(render_context *ctx, vec3 position, vec3 rotation, ve
     mat4 position_matrix = mat4_make_translation(position.x, position.y, position.z);
 
     mat4 world_matrix = mat4_identity();
+    world_matrix = mat4_mul_mat4(scale_matrix, world_matrix);
     world_matrix = mat4_mul_mat4(rotation_matrix_x, world_matrix);
     world_matrix = mat4_mul_mat4(rotation_matrix_y, world_matrix);
     world_matrix = mat4_mul_mat4(rotation_matrix_z, world_matrix);
-    world_matrix = mat4_mul_mat4(scale_matrix, world_matrix);
     world_matrix = mat4_mul_mat4(position_matrix, world_matrix);
 
     ctx->world_matrix = world_matrix;
@@ -182,7 +182,7 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
             vec3 b = vec3_sub(v2.position, v0.position);
             vec3 normal = vec3_normalize(vec3_cross(a, b));
             vec3 view_dir = vec3_normalize(v0.position);
-            if (vec3_dot(normal, view_dir) < 0) {
+            if (vec3_dot(normal, view_dir) > 0) {
                 continue;
             }
         }
