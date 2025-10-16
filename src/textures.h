@@ -1,5 +1,5 @@
-#ifndef TEXTURE_H
-#define TEXTURE_H
+#ifndef TEXTURES_H
+#define TEXTURES_H
 
 #include "c3m.h"
 #include <string.h>
@@ -25,4 +25,4 @@ void tm_delete_texture(texture_manager_t* tm, int id);
 texture_t* tm_get_texture(texture_manager_t* tm, int id);
 u32 tm_sample_texture(void);
 
-#endif
+#endif // TEXTURES_H

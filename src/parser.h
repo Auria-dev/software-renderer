@@ -1,5 +1,5 @@
-#ifndef LAODER_H
-#define LAODER_H
+#ifndef PARSER_H
+#define PARSER_H
 
 #include "mesh.h"
 #include "c3m.h"
@@ -25,4 +25,4 @@ texture_t parse_png_file(const char *filepath);
 texture_t parse_jpg_file(const char *filepath);
 texture_t parse_bmp_file(const char *filepath);
 
-#endif
+#endif // PARSER_H

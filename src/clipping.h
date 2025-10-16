@@ -1,7 +1,7 @@
 #ifndef CLIPPING_H
 #define CLIPPING_H
 
-#include "graphics.h"
+#include "vertex.h"
 
 #define MAX_POLYGON_VERTICES 10
 

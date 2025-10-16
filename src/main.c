@@ -1,17 +1,21 @@
 #include "main.h"
 
-#define RENDER_WIDTH 640 * 2
-#define RENDER_HEIGHT 480 * 2
+#define RENDER_WIDTH 640
+#define RENDER_HEIGHT 480
 
 static bool running = false;
 static float delta_time = 0.0f;
 static vec2 mousepos;
 static vec3 cam_pos = {0,0,-5};
+static vec3 cam_rot = {0,0,0};
 
 struct movement {
     bool forward, backward;
     bool left, right;
     bool up, down;
+
+    bool llook, rlook;
+    bool ulook, dlook;
 } movement = {0};
 
 void handle_event(int event, void *data) {
@@ -29,6 +33,12 @@ void handle_event(int event, void *data) {
                 case KEY_D:     movement.right    = true; break;
                 case KEY_SPACE: movement.up       = true; break;
                 case KEY_SHIFT: movement.down     = true; break;
+
+                // arrow keys look
+                case KEY_UP:    movement.ulook    = true; break;
+                case KEY_DOWN:  movement.dlook    = true; break;
+                case KEY_LEFT:  movement.llook    = true; break;
+                case KEY_RIGHT: movement.rlook    = true; break;
                 default: break;
             }
         } break;
@@ -41,6 +51,12 @@ void handle_event(int event, void *data) {
                 case KEY_D:     movement.right    = false; break;
                 case KEY_SPACE: movement.up       = false; break;
                 case KEY_SHIFT: movement.down     = false; break;
+
+                // arrow keys look
+                case KEY_UP:    movement.ulook    = false; break;
+                case KEY_DOWN:  movement.dlook    = false; break;
+                case KEY_LEFT:  movement.llook    = false; break;
+                case KEY_RIGHT: movement.rlook    = false; break;
                 default: break;
             }
         } break;
@@ -60,7 +76,7 @@ int main(int argc, char *argv[]) {
         RENDER_WIDTH, RENDER_HEIGHT,
         70.0f, (float)RENDER_WIDTH / (float)RENDER_HEIGHT, 0.1f, 100.0f,
         (vec3){0,0,5}, (vec3){0,0,0}, (vec3){0,1,0},
-        true, false, true
+        true, false, false
     );
     window_bind_framebuffer(win, &ctx.framebuffer);
 
@@ -83,21 +99,37 @@ int main(int argc, char *argv[]) {
 
     while (running) {
         window_poll_events(win);
+        if (movement.dlook)    cam_rot.x += 2.0f * delta_time;
+        if (movement.ulook)    cam_rot.x -= 2.0f * delta_time;
+        if (movement.llook)    cam_rot.y += 2.0f * delta_time;
+        if (movement.rlook)    cam_rot.y -= 2.0f * delta_time;
 
-        if (movement.forward)  cam_pos.z += 5.0f * delta_time;
-        if (movement.backward) cam_pos.z -= 5.0f * delta_time;
-        if (movement.left)     cam_pos.x += 5.0f * delta_time;
-        if (movement.right)    cam_pos.x -= 5.0f * delta_time;
+        vec3 forward = { cosf(cam_rot.y-deg_to_rad(90)), 0, -sinf(cam_rot.y-deg_to_rad(90)) };
+        vec3 right = {  sinf(cam_rot.y-deg_to_rad(90)), 0, cosf(cam_rot.y-deg_to_rad(90)) };
+        forward = vec3_normalize(forward);
+        right = vec3_normalize(right);
+        if (movement.forward)  cam_pos = vec3_add(cam_pos, vec3_scale(forward, 5.0f * delta_time));
+        if (movement.backward) cam_pos = vec3_sub(cam_pos, vec3_scale(forward, 5.0f * delta_time));
+        if (movement.left)     cam_pos = vec3_sub(cam_pos, vec3_scale(right, 5.0f * delta_time));
+        if (movement.right)    cam_pos = vec3_add(cam_pos, vec3_scale(right, 5.0f * delta_time));
         if (movement.up)       cam_pos.y += 5.0f * delta_time;
         if (movement.down)     cam_pos.y -= 5.0f * delta_time;
 
-        g_update_view_matrix(&ctx, mat4_look_at(cam_pos, vec3_sub(cam_pos, vec3_new(0,0,-1)), (vec3){0,1,0})); // up is just +Y cause no rotation yet
-        
+        vec3 target = vec3_forward();
+        mat4 cam_rot_x = mat4_make_rotation_x(cam_rot.x);
+        mat4 cam_rot_y = mat4_make_rotation_y(cam_rot.y);
+        mat4 cam_rot_z = mat4_make_rotation_z(cam_rot.z);
+        mat4 rotation_matrix = mat4_mul_mat4(mat4_mul_mat4(cam_rot_y, cam_rot_x), cam_rot_z);
+        vec3 cam_dir = vec4_to_vec3(mat4_mul_vec4(rotation_matrix, vec3_to_vec4(target)));
+        target = vec3_add(cam_pos, cam_dir);
+        vec3 up = vec4_to_vec3(mat4_mul_vec4(rotation_matrix, vec3_to_vec4(vec3_up())));
+        g_update_view_matrix(&ctx, mat4_look_at(cam_pos, target, up));
+
         memset(ctx.framebuffer.color_buffer, (int)0xff222222, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
         memset(ctx.framebuffer.depth_buffer, 0.0f, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(float));
 
-        mymodel.rotation.y += 0.5f * delta_time;
-        mymodel.rotation.x += 0.1f * delta_time;
+        // mymodel.rotation.y += 0.5f * delta_time;
+        // mymodel.rotation.x += 0.1f * delta_time;
 
         // draw loaded model
         g_update_world_matrix(&ctx, mymodel.position, mymodel.rotation, mymodel.scale);

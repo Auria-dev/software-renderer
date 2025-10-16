@@ -112,6 +112,54 @@ void draw_line(render_context *ctx, int x0, int y0, int x1, int y1, u32 color) {
     }
 }
 
+void draw_line_depth(render_context *ctx, vec3 p0, vec3 p1, uint32_t color) {
+    const int dx = abs(p1.x - p0.x);
+    const int dy = abs(p1.y - p0.y);
+    const int sx = p0.x < p1.x ? 1 : -1;
+    const int sy = p0.y < p1.y ? 1 : -1;
+    const int steps = dx > dy ? dx : dy;
+    
+    const float rw0 = 1.0f / p0.z;
+    const float rw1 = 1.0f / p1.z;
+    float current_rw = rw0;
+    const float rw_step = (steps > 0) ? ((rw1 - rw0) * (1.0f / steps)) : 0.0f;
+    
+    const float EPSILON_OFFSET = 20.0f * EPS;
+    const int index_step_y = sy * ctx->framebuffer.width;
+    
+    int64_t dx64 = dx;
+    int64_t dy64 = dy;
+    int64_t err = dx64 - dy64;
+    int current_x = p0.x;
+    int current_y = p0.y;
+    int index = current_y * ctx->framebuffer.width + current_x;
+
+    for (int i = 0; i <= steps; ++i) {
+        if ((unsigned)current_x < (unsigned)ctx->framebuffer.width && 
+            (unsigned)current_y < (unsigned)ctx->framebuffer.height) {
+            if (current_rw + EPSILON_OFFSET >= ctx->framebuffer.depth_buffer[index]) {
+                ctx->framebuffer.depth_buffer[index] = current_rw;
+                draw_pixel(ctx, current_x, current_y, color);
+            }
+        }
+
+        if (i == steps) break;
+
+        const int64_t e2 = err * 2;
+        if (e2 > -dy64) {
+            err -= dy64;
+            current_x += sx;
+            index += sx;
+        }
+        if (e2 < dx64) {
+            err += dx64;
+            current_y += sy;
+            index += index_step_y;
+        }
+        current_rw += rw_step;
+    }
+}
+
 void g_update_projection_matrix(render_context *ctx, float fov, float ar) {
     ctx->projection_matrix = mat4_make_perspective(deg_to_rad(fov), ar, ctx->clip_near, ctx->clip_far);
 }
