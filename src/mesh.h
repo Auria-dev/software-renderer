@@ -25,4 +25,4 @@ typedef struct {
     // TODO: collision data for eventual physics engine
 } mesh_t;
 
-#endif
+#endif // MESH_H

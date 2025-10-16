@@ -3,7 +3,8 @@
 
 #include "c3m.h"
 #include "vertex.h"
-#include "texture.h"
+#include "textures.h"
+#include "clipping.h"
 
 enum {
   GBUFFER_INDEX,
@@ -24,11 +25,6 @@ enum {
     FRUSTUM_NEAR,
     FRUSTUM_FAR
 };
-
-typedef struct {
-    vec3 point;
-    vec3 normal;
-} clipping_plane_t;
 
 typedef struct {
     clipping_plane_t planes[6];
@@ -54,7 +50,6 @@ typedef struct render_context {
   int material_id;
   
   texture_manager_t texture_manager;
-  // TODO: shader program
 
   float clip_near;
   float clip_far;
@@ -62,9 +57,7 @@ typedef struct render_context {
   bool depth_test;
   bool blend_test;
   bool cull_face;
-
 } render_context;
-
 
 void draw_pixel(render_context *ctx, int x, int y, u32 c);
 
@@ -83,9 +76,14 @@ void g_update_world_matrix(render_context *ctx, vec3 position, vec3 rotation, ve
 
 void g_bind_material(render_context *ctx, int material_id);
 void g_bind_buffer(render_context *ctx, u32 type, void* data, size_t size);
-void g_buffer_data(render_context *ctx, u32 type, void* data, size_t size);
-#include "clipping.h"
 
-void g_draw_elements(render_context *ctx, u32 count, u32* indices);
+void g_draw_elements(render_context *ctx, u32 count, u32 *indices);
 
-#endif
+// temporary until modular attributes/shaders are implemented
+void draw_triangle_scalar(
+        render_context *ctx,
+        float x0, float y0, float w0, float u0, float v0, u32 c0,
+        float x1, float y1, float w1, float u1, float v1, u32 c1,
+        float x2, float y2, float w2, float u2, float v2, u32 c2);
+
+#endif // GRAPHICS_H

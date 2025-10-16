@@ -1,5 +1,4 @@
 #include "clipping.h"
-#include <stdbool.h>
 
 static float signed_distance(const vertex_t* vertex, const clipping_plane_t* plane) {
     return vec3_dot(plane->normal, vertex->position) - vec3_dot(plane->normal, plane->point);

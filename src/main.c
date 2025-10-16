@@ -1,7 +1,7 @@
 #include "main.h"
 
-#define RENDER_WIDTH 640
-#define RENDER_HEIGHT 480
+#define RENDER_WIDTH 640 * 2
+#define RENDER_HEIGHT 480 * 2
 
 static bool running = false;
 static float delta_time = 0.0f;
@@ -53,7 +53,7 @@ void handle_event(int event, void *data) {
 }
 
 int main(int argc, char *argv[]) {
-    window_t *win = window_create("Hello :D", 1280, 720, handle_event);
+    window_t *win = window_create("Hello :D", RENDER_WIDTH, RENDER_HEIGHT, handle_event);
     if (!win) { fprintf(stderr, "Failed to create window\n"); return 1; }
 
     render_context ctx = render_context_init(
@@ -73,41 +73,6 @@ int main(int argc, char *argv[]) {
     mymodel.rotation = (vec3){0,0,0};
     mymodel.scale    = (vec3){1,1,1};
 
-    // cube mesh hardcoded
-    mesh_t mymesh = {0};
-    mymesh.vertex_count = 8;
-    mymesh.vertices = malloc(sizeof(vertex_t) * mymesh.vertex_count);
-    mymesh.vertices[0].position = (vec3){-1,-1,-1};
-    mymesh.vertices[1].position = (vec3){ 1,-1,-1};
-    mymesh.vertices[2].position = (vec3){ 1, 1,-1};
-    mymesh.vertices[3].position = (vec3){-1, 1,-1};
-    mymesh.vertices[4].position = (vec3){-1,-1, 1};
-    mymesh.vertices[5].position = (vec3){ 1,-1, 1};
-    mymesh.vertices[6].position = (vec3){ 1, 1, 1};
-    mymesh.vertices[7].position = (vec3){-1, 1, 1};
-    for (int i = 0; i < mymesh.vertex_count; i++) {
-        mymesh.vertices[i].normal = vec3_zero();
-        mymesh.vertices[i].texcoord = (vec2){0,0};
-        mymesh.vertices[i].color = 0xffffffff;
-    }
-    mymesh.submesh_count = 1;
-    mymesh.submeshes = malloc(sizeof(submesh_t) * mymesh.submesh_count);
-    mymesh.submeshes[0].material_id = 0; // default material
-    mymesh.submeshes[0].index_count = 36;
-    mymesh.submeshes[0].indices = malloc(sizeof(u32) * mymesh.submeshes[0].index_count);
-    u32 cube_indices[] = {
-        0,2,1,  2,0,3,
-        1,6,5,  6,1,2,
-        5,7,4,  7,5,6,
-        4,3,0,  3,4,7,
-        3,6,2,  6,3,7,
-        4,1,5,  1,4,0
-    };
-    memcpy(mymesh.submeshes[0].indices, cube_indices, sizeof(u32) * mymesh.submeshes[0].index_count);
-    mymesh.position = (vec3){0,3,0};
-    mymesh.rotation = (vec3){0,0,0};
-    mymesh.scale    = (vec3){5,1,1};
-    
     // setup render context matrices
     g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
 
@@ -127,22 +92,12 @@ int main(int argc, char *argv[]) {
         if (movement.down)     cam_pos.y -= 5.0f * delta_time;
 
         g_update_view_matrix(&ctx, mat4_look_at(cam_pos, vec3_sub(cam_pos, vec3_new(0,0,-1)), (vec3){0,1,0})); // up is just +Y cause no rotation yet
-
-        mymesh.rotation.y += 0.5f * delta_time;
-        mymesh.rotation.x += 0.1f * delta_time;
-
+        
         memset(ctx.framebuffer.color_buffer, (int)0xff222222, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
+        memset(ctx.framebuffer.depth_buffer, 0.0f, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(float));
 
-        // draw test mesh
-        g_update_world_matrix(&ctx, mymesh.position, mymesh.rotation, mymesh.scale);
-        for (int i = 0; i < mymesh.submesh_count; i++) {
-            submesh_t *sm = &mymesh.submeshes[i];
-            g_bind_material(&ctx, sm->material_id);
-            g_bind_buffer(&ctx, GBUFFER_VERTEX, mymesh.vertices, mymesh.vertex_count * sizeof(vertex_t));
-            g_bind_buffer(&ctx, GBUFFER_INDEX, sm->indices, sm->index_count * sizeof(u32));
-
-            g_draw_elements(&ctx, sm->index_count, sm->indices);
-        }
+        mymodel.rotation.y += 0.5f * delta_time;
+        mymodel.rotation.x += 0.1f * delta_time;
 
         // draw loaded model
         g_update_world_matrix(&ctx, mymodel.position, mymodel.rotation, mymodel.scale);

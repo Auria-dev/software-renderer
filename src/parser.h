@@ -3,7 +3,7 @@
 
 #include "mesh.h"
 #include "c3m.h"
-#include "texture.h"
+#include "textures.h"
 #include "array.h"
 #include <stdio.h>
 #include <stdlib.h>

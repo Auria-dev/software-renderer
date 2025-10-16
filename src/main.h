@@ -5,7 +5,7 @@
 #include "c3m.h"
 #include "platform.h"
 #include "graphics.h"
-#include "loader.h"
+#include "parser.h"
 #include "vertex.h"
 #include "mesh.h"
 #include <stdio.h>
@@ -14,4 +14,4 @@
 #include <unistd.h>
 #include <time.h>
 
-#endif
+#endif // MAIN_H

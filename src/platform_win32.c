@@ -133,7 +133,13 @@ window_t *window_create(const char *title, int width, int height, void (*event_c
         g_class_registered = true;
     }
 
-    HWND hwnd = CreateWindowExA(0, g_wincname, title, WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
+    RECT rect = { 0, 0, width, height };
+    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+
+    int win_width = rect.right - rect.left;
+    int win_height = rect.bottom - rect.top;
+
+    HWND hwnd = CreateWindowExA( 0, g_wincname, title, WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, win_width, win_height, NULL, NULL, GetModuleHandle(NULL), NULL);
     if (!hwnd) return NULL;
 
     window_t *w = (window_t *)malloc(sizeof(window_t));

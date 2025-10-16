@@ -46,6 +46,7 @@ typedef struct {
 #define lerpf(a, b, t) ((a) * (1.0f - (t)) + (b) * (t))
 #define deg_to_rad(deg) ((deg) * (M_PI / 180.0f))
 #define rad_to_deg(rad) ((rad) * (180.0f / M_PI))
+#define swap(a,b) do { __typeof__(a) _t = (a); (a)=(b); (b)=_t; } while(0)
 
 vec2  vec2_new(float x, float y);
 vec2  vec2_add(vec2 a, vec2 b);
@@ -141,4 +142,4 @@ mat4  mat4_transpose(mat4 m);
 float det3x3(float a, float b, float c, float d, float e, float f, float g, float h, float i);
 mat4  mat4_inverse(mat4 M);
 
-#endif
+#endif // C3M_H

@@ -1,4 +1,4 @@
-#include "loader.h"
+#include "parser.h"
 
 char* trim_whitespace(char* str) {
     char* end;

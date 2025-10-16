@@ -1,4 +1,4 @@
-#include "texture.h"
+#include "textures.h"
 
 texture_manager_t tm_init() {
     texture_manager_t tm = {0};
