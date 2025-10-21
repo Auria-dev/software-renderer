@@ -1,5 +1,6 @@
 
 TARGET = main
+# FLAGS = -Wall -std=c99 -flto -O3 -pedantic -march=native -ffast-math -funroll-loops -g
 FLAGS = -Wall -std=c99 -flto -O3 -pedantic -march=native -ffast-math -funroll-loops -g
 
 SRC_DIR = src

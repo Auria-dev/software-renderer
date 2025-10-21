@@ -68,6 +68,37 @@ void handle_event(int event, void *data) {
     }
 }
 
+u32 shader_gouraud(const render_context *ctx, const interpolator_t *interps, float inv_w) {
+    // Attribute 1 is texcoord (type FRAG_ATTR_VEC2)
+    // const interpolator_t *uv_interp = &interps[1];
+    // vec2 uv;
+    // uv.x = uv_interp->v[0];
+    // uv.y = uv_interp->v[1];
+    // if (uv_interp->perspective_correct) {
+    //     uv.x *= inv_w;
+    //     uv.y *= inv_w;
+    // }
+
+    // // Attribute 0 is color (type FRAG_ATTR_U32)
+    const interpolator_t *color_interp = &interps[0];
+
+    float r = color_interp->v[0];
+    float g = color_interp->v[1];
+    float b = color_interp->v[2];
+
+    if (color_interp->perspective_correct) {
+        r *= inv_w;
+        g *= inv_w;
+        b *= inv_w;
+    }
+
+    u32 r_u32 = (u32)((r < 0) ? 0 : (r > 255) ? 255 : r);
+    u32 g_u32 = (u32)((g < 0) ? 0 : (g > 255) ? 255 : g);
+    u32 b_u32 = (u32)((b < 0) ? 0 : (b > 255) ? 255 : b);
+
+    return 0xFF000000 | (r_u32 << 16) | (g_u32 << 8) | b_u32;
+}
+
 int main(int argc, char *argv[]) {
     window_t *win = window_create("Hello :D", RENDER_WIDTH, RENDER_HEIGHT, handle_event);
     if (!win) { fprintf(stderr, "Failed to create window\n"); return 1; }
@@ -78,7 +109,10 @@ int main(int argc, char *argv[]) {
         (vec3){0,0,5}, (vec3){0,0,0}, (vec3){0,1,0},
         true, false, false
     );
+    
     window_bind_framebuffer(win, &ctx.framebuffer);
+    g_bind_fragment_shader(&ctx, shader_gouraud);
+    g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
 
     texture_manager_t texture_manager = tm_init();
     
@@ -88,9 +122,6 @@ int main(int argc, char *argv[]) {
     mymodel.position = (vec3){0,0,0};
     mymodel.rotation = (vec3){0,0,0};
     mymodel.scale    = (vec3){1,1,1};
-
-    // setup render context matrices
-    g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
 
     running = true;
     struct timespec last_time;

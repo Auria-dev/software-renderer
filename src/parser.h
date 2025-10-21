@@ -15,6 +15,7 @@ typedef struct {
     int texture_id;
 } material_lookup_t;
 
+u32 find_or_add_vertex(mesh_t* mesh, vertex_t new_vertex);
 mesh_t load_mesh(const char *filepath);
 void parse_obj_file(void);
 void parse_mtl_file(void);

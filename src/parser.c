@@ -10,10 +10,7 @@ char* trim_whitespace(char* str) {
     return str;
 }
 
-static u32 find_or_add_vertex(
-    mesh_t* mesh,
-    vertex_t new_vertex
-) {
+u32 find_or_add_vertex(mesh_t* mesh, vertex_t new_vertex) {
     for (int i = 0; i < mesh->vertex_count; i++) {
         if (memcmp(&mesh->vertices[i], &new_vertex, sizeof(vertex_t)) == 0) {
             return i; 
