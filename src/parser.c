@@ -27,11 +27,10 @@ static u32 find_or_add_vertex(
     return new_index;
 }
 
-
-void load_obj(const char* path, mesh_t* mesh, texture_manager_t* tm) {
+void load_obj(const char* path, mesh_t* mesh, material_manager_t* m) {
     FILE* file = fopen(path, "r");
     if (!file) {
-        printf("Error opening OBJ file: %s\n", path);
+        printf("ERROR: Unable to open OBJ file: %s\n", path);
         return;
     }
 
@@ -80,7 +79,7 @@ void load_obj(const char* path, mesh_t* mesh, texture_manager_t* tm) {
 
             char mtl_path[512];
             snprintf(mtl_path, sizeof(mtl_path), "%s%s", obj_dir, mtl_filename);
-            material_lookup_count = load_mtl(mtl_path, obj_dir, tm, &material_lookups);
+            material_lookup_count = load_mtl(mtl_path, obj_dir, m, &material_lookups);
         } else if (strncmp(trimmed, "usemtl ", 7) == 0) {
             char mtl_name[128];
             strncpy(mtl_name, trimmed + 7, sizeof(mtl_name) - 1);
@@ -122,7 +121,7 @@ void load_obj(const char* path, mesh_t* mesh, texture_manager_t* tm) {
                                  &p[0], &t[0], &n[0], &p[1], &t[1], &n[1], &p[2], &t[2], &n[2]);
 
             if (matches != 9) {
-                printf("Warning: Unsupported face format: %s. Only v/vt/vn is supported.\n", trimmed);
+                printf("WARNING: Unsupported face format: %s. Only v/vt/vn is supported.\n", trimmed);
                 continue;
             }
 
@@ -148,16 +147,16 @@ void load_obj(const char* path, mesh_t* mesh, texture_manager_t* tm) {
     array_free(temp_normals);
     array_free(material_lookups);
 
-    printf("Loaded OBJ: %d vertices, %d submeshes\n", mesh->vertex_count, mesh->submesh_count);
+    printf("INFO: Loaded OBJ: %d vertices, %d submeshes\n", mesh->vertex_count, mesh->submesh_count);
     for (int i = 0; i < mesh->submesh_count; i++) {
         printf("  - Submesh %d: material_id=%d, indices=%d\n", i, mesh->submeshes[i].material_id, mesh->submeshes[i].index_count);
     }
 }
 
-int load_mtl(const char* mtl_path, const char* obj_dir, texture_manager_t* tm, material_lookup_t** lookup_table_out) {
+int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, material_lookup_t** lookup_table_out) {
     FILE* file = fopen(mtl_path, "r");
     if (!file) {
-        printf("Error: Cannot open MTL file: %s\n", mtl_path);
+        printf("ERROR: Cannot open MTL file: %s\n", mtl_path);
         return 0;
     }
 
@@ -188,13 +187,14 @@ int load_mtl(const char* mtl_path, const char* obj_dir, texture_manager_t* tm, m
             
             int width, height, channels;
             unsigned char* data = NULL;
-            tm_parse_texture_file(texture_path, &width, &height, &channels, &data);
+            m_parse_texture_file(texture_path, &width, &height, &channels, &data);
 
             if (data) {
-                int texture_id = tm_create_texture(tm, width, height, channels, data);
+                int texture_id = m_create_texture(m, width, height, channels, data);
                 current_lookup->texture_id = texture_id;
+                printf("DEBUG: load_mtl: created texture id=%d for material='%s' manager=%p\n", texture_id, current_lookup->name, (void*)m);
             } else {
-                 printf("Warning: Failed to load texture: %s\n", texture_path);
+                 printf("WARNING: Failed to load texture: %s\n", texture_path);
             }
         }
     }

@@ -3,7 +3,7 @@
 
 #include "c3m.h"
 #include "vertex.h"
-#include "textures.h"
+#include "materials.h"
 #include "clipping.h"
 
 enum {
@@ -36,6 +36,13 @@ typedef struct {
   int width, height;
 } framebuffer_t;
 
+typedef enum {
+    SHADER_SGT, // scalar gouraud textured
+    SHADER_SGC, // scalar gouraud colored
+    SHADER_SFC, // scalar flat colored
+    SHADER_SFT, // scalar flat textured
+} shader_type_t;
+
 typedef struct render_context {
   mat4 projection_matrix;
   mat4 world_matrix;
@@ -49,7 +56,7 @@ typedef struct render_context {
   buffer_t index_buffer;
   int material_id;
   
-  texture_manager_t texture_manager;
+  material_manager_t material_manager;
 
   float clip_near;
   float clip_far;
@@ -79,7 +86,13 @@ void g_bind_buffer(render_context *ctx, u32 type, void* data, size_t size);
 
 void g_draw_elements(render_context *ctx, u32 count, u32 *indices);
 
-// temporary until modular attributes/shaders are implemented
+void draw_triangle(
+        render_context* ctx,
+        shader_type_t shader_type,
+        float x0, float y0, float w0, float u0, float v0, u32 c0,
+        float x1, float y1, float w1, float u1, float v1, u32 c1,
+        float x2, float y2, float w2, float u2, float v2, u32 c2);
+
 void draw_triangle_scalar(
         render_context *ctx,
         float x0, float y0, float w0, float u0, float v0, u32 c0,

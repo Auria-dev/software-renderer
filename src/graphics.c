@@ -1,5 +1,37 @@
 #include "graphics.h"
 
+// scalar, gouraud, textured
+#ifndef draw_triangle_sgt
+#define RASTERIZER_NAME draw_triangle_sgt
+#define RASTER_GOURAUD  1
+#define RASTER_TEXTURE  1
+#include "triangle_template.h"
+#endif
+
+// scalar, gouraud, colored
+#ifndef draw_triangle_sgc
+#define RASTERIZER_NAME draw_triangle_sgc
+#define RASTER_GOURAUD  1
+#define RASTER_TEXTURE  0
+#include "triangle_template.h"
+#endif
+
+// scalar, flat, textured
+#ifndef draw_triangle_sft
+#define RASTERIZER_NAME draw_triangle_sft
+#define RASTER_GOURAUD  0
+#define RASTER_TEXTURE  1
+#include "triangle_template.h"
+#endif
+
+// scalar, flat, colored
+#ifndef draw_triangle_sfc
+#define RASTERIZER_NAME draw_triangle_sfc
+#define RASTER_GOURAUD  0
+#define RASTER_TEXTURE  0
+#include "triangle_template.h"
+#endif
+
 render_context render_context_init(
     int width, int height,
     float fov, float aspect_ratio, float near, float far,
@@ -16,7 +48,7 @@ render_context render_context_init(
     ctx.index_buffer.data = NULL;
     ctx.index_buffer.size = 0;
     ctx.index_buffer.type = GBUFFER_INDEX;
-    ctx.texture_manager = tm_init();
+    ctx.material_manager = m_init();
     ctx.clip_near = near;
     ctx.clip_far = far;
     ctx.depth_test = enable_depth_test;
@@ -24,6 +56,7 @@ render_context render_context_init(
     ctx.cull_face = enable_cull_face;
     ctx.material_id = -1;
     ctx.frustum = frustum_init(fov, aspect_ratio, near, far);
+    ctx.material_manager = m_init();
     return ctx;
 }
 
@@ -225,6 +258,10 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
         v1.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v1.position)));
         v2.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v2.position)));
 
+        v0.color = ctx->material_id == 0 ? 0xffff0000 : 0xffffffff;
+        v1.color = ctx->material_id == 0 ? 0xff00ff00 : 0xffffffff;
+        v2.color = ctx->material_id == 0 ? 0xff0000ff : 0xffffffff;
+
         if (ctx->cull_face) {
             vec3 a = vec3_sub(v1.position, v0.position);
             vec3 b = vec3_sub(v2.position, v0.position);
@@ -269,20 +306,45 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
             float screen2_x = (pv2.x * (ctx->framebuffer.width  / 2.0f)) + (ctx->framebuffer.width  / 2.0f);
             float screen2_y = (pv2.y * (ctx->framebuffer.height / 2.0f)) + (ctx->framebuffer.height / 2.0f);
 
-            u32 color = ctx->material_id == 0 ? 0xffff0000 : 0xff00ff00;
 
             // draw_line(ctx, (int)screen0_x, (int)screen0_y, (int)screen1_x, (int)screen1_y, color);
             // draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, color);
             // draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, color);
             
-            draw_triangle_scalar(ctx,
-                screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, color,
-                screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, color,
-                screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, color
+            draw_triangle(
+                ctx,
+                ctx->material_id == 0 ? SHADER_SGT : SHADER_SFT,
+                screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, tv0.color,
+                screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, tv1.color,
+                screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, tv2.color
             );
         }
     }
 }
+
+void draw_triangle(
+    render_context* ctx,
+    shader_type_t shader_type,
+    float x0, float y0, float w0, float u0, float v0, u32 c0,
+    float x1, float y1, float w1, float u1, float v1, u32 c1,
+    float x2, float y2, float w2, float u2, float v2, u32 c2) {
+    
+    switch (shader_type) {
+        case SHADER_SGT: {
+            draw_triangle_sgt(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+        } break;
+        case SHADER_SGC: {
+            draw_triangle_sgc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+        } break;
+        case SHADER_SFT: {
+            draw_triangle_sft(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+        } break;
+        case SHADER_SFC: {
+            draw_triangle_sfc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+        } break;
+    }
+}
+
 
 void draw_triangle_scalar(
         render_context *ctx,
@@ -381,6 +443,14 @@ void draw_triangle_scalar(
     float g_row = rcp_area * (g0_persp * w0_row + g1_persp * w1_row + g2_persp * w2_row);
     float b_row = rcp_area * (b0_persp * w0_row + b1_persp * w1_row + b2_persp * w2_row);
 
+    texture_t *texture = m_get_texture(&ctx->material_manager, ctx->material_id);
+    if (!texture) return;
+    
+    const int tex_width = texture->width;
+    const int tex_height = texture->height;
+    const int tex_width_mask = tex_width - 1;
+    const int tex_height_mask = tex_height - 1;
+
     intptr_t row_offset = clamped_min_y * win_width;
     for (int y = clamped_min_y; y <= clamped_max_y; ++y) {
         float* z_ptr = ctx->framebuffer.depth_buffer + row_offset + clamped_min_x;
@@ -419,33 +489,29 @@ void draw_triangle_scalar(
             const int  vg = g_start * inv_w;
             const int  vb = b_start * inv_w;
 
-            // const int tex_x = (int)(u * tex_width) & tex_width_mask;
-            // const int tex_y = (int)(v * tex_height) & tex_height_mask;
-            // const u8* texel = texture->data + (tex_y * tex_width + tex_x) * 4;
+            const int tex_x = (int)(u * tex_width) & tex_width_mask;
+            const int tex_y = (int)(v * tex_height) & tex_height_mask;
+            const u8* texel = texture->data + (tex_y * tex_width + tex_x) * 4;
 
-            // if (texel[3] == 0x00) {
-            //     w0_start += dx0;
-            //     w1_start += dx1;
-            //     w2_start += dx2;
-            //     u_start  += u_dx;
-            //     v_start  += v_dx;
-            //     r_start  += r_dx;
-            //     g_start  += g_dx;
-            //     b_start  += b_dx;
-            //     depth    += depth_dx;
-            //     z_ptr++;
-            //     color_ptr++;
-            //     continue;
-            // }
+            if (texel[3] == 0x00) {
+                w0_start += dx0;
+                w1_start += dx1;
+                w2_start += dx2;
+                u_start  += u_dx;
+                v_start  += v_dx;
+                r_start  += r_dx;
+                g_start  += g_dx;
+                b_start  += b_dx;
+                depth    += depth_dx;
+                z_ptr++;
+                color_ptr++;
+                continue;
+            }
             
-            // const u8 tr = texel[0];
-            // const u8 tg = texel[1];
-            // const u8 tb = texel[2];
+            const u8 tr = texel[0];
+            const u8 tg = texel[1];
+            const u8 tb = texel[2];
             
-            const u8 tr = 0xff;
-            const u8 tg = 0xff;
-            const u8 tb = 0xff;
-
             int mod_r = (tr*vr)>>8;
             int mod_g = (tg*vg)>>8;
             int mod_b = (tb*vb)>>8;

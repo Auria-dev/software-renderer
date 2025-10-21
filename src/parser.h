@@ -3,7 +3,7 @@
 
 #include "mesh.h"
 #include "c3m.h"
-#include "textures.h"
+#include "materials.h"
 #include "array.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,11 +15,8 @@ typedef struct {
     int texture_id;
 } material_lookup_t;
 
-mesh_t load_mesh(const char *filepath);
-void parse_obj_file(void);
-void parse_mtl_file(void);
-void load_obj(const char* path, mesh_t* mesh, texture_manager_t* tm);
-int load_mtl(const char* mtl_path, const char* obj_dir, texture_manager_t* tm, material_lookup_t** lookup_table_out);
+void load_obj(const char* path, mesh_t* mesh, material_manager_t* m);
+int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, material_lookup_t** lookup_table_out);
 
 texture_t parse_png_file(const char *filepath);
 texture_t parse_jpg_file(const char *filepath);

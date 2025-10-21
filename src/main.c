@@ -76,14 +76,12 @@ int main(int argc, char *argv[]) {
         RENDER_WIDTH, RENDER_HEIGHT,
         70.0f, (float)RENDER_WIDTH / (float)RENDER_HEIGHT, 0.1f, 100.0f,
         (vec3){0,0,5}, (vec3){0,0,0}, (vec3){0,1,0},
-        true, false, false
+        true, false, true
     );
     window_bind_framebuffer(win, &ctx.framebuffer);
 
-    texture_manager_t texture_manager = tm_init();
-    
     mesh_t mymodel = {0};
-    load_obj("assets/models/monkey.obj", &mymodel, &texture_manager);
+    load_obj("assets/models/monkey.obj", &mymodel, &ctx.material_manager);
 
     mymodel.position = (vec3){0,0,0};
     mymodel.rotation = (vec3){0,0,0};
@@ -164,7 +162,7 @@ int main(int argc, char *argv[]) {
         last_time = now;
     }
 
-    tm_free(&texture_manager);
+    m_free(&ctx.material_manager);
     window_destroy(win);
     return 0;
 }
