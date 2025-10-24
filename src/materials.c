@@ -1,6 +1,5 @@
 #include "materials.h"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 material_manager_t m_init() {

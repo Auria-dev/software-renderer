@@ -6,7 +6,7 @@
 static bool running = false;
 static float delta_time = 0.0f;
 static vec2 mousepos;
-static vec3 cam_pos = {0,0,-5};
+static vec3 cam_pos = {0,0,-1};
 static vec3 cam_rot = {0,0,0};
 
 struct movement {
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     window_bind_framebuffer(win, &ctx.framebuffer);
 
     mesh_t mymodel = {0};
-    load_obj("assets/models/monkey.obj", &mymodel, &ctx.material_manager);
+    load_obj("assets/models/church.obj", &mymodel, &ctx.material_manager);
 
     mymodel.position = (vec3){0,0,0};
     mymodel.rotation = (vec3){0,0,0};
@@ -90,12 +90,17 @@ int main(int argc, char *argv[]) {
     // setup render context matrices
     g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
 
-    running = true;
-    struct timespec last_time;
-    clock_gettime(CLOCK_MONOTONIC, &last_time);
-    int frames = 0;
+    double last_frame_time = (double)clock() / CLOCKS_PER_SEC;
+    double fps_timer = 0.0;
+    int frame_count = 0;
+    int last_fps = 0;
 
+    running = true;
     while (running) {
+        double current_time = (double)clock() / CLOCKS_PER_SEC; 
+        delta_time = (float)(current_time - last_frame_time);
+        last_frame_time = current_time;
+
         window_poll_events(win);
         if (movement.dlook)    cam_rot.x += 2.0f * delta_time;
         if (movement.ulook)    cam_rot.x -= 2.0f * delta_time;
@@ -141,25 +146,18 @@ int main(int argc, char *argv[]) {
         }
 
         window_blit(win);
-        frames++;
-
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-
-        delta_time = (now.tv_sec - last_time.tv_sec) + (now.tv_nsec - last_time.tv_nsec) * 1e-9;
-        static double fps_timer = 0.0;
+        frame_count++;
         fps_timer += delta_time;
-        frames++;
 
         if (fps_timer >= 1.0) {
-            char title[64];
-            snprintf(title, 64, "software renderer - fps: %d", frames);
-            window_set_title(win, title);
-            fps_timer = 0.0;
-            frames = 0;
-        }
+            last_fps = frame_count;
+            frame_count = 0;
+            fps_timer -= 1.0;
 
-        last_time = now;
+            char title[64];
+            snprintf(title, 64, "software renderer - fps: %d", last_fps);
+            window_set_title(win, title);
+        }
     }
 
     m_free(&ctx.material_manager);

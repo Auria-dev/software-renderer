@@ -258,9 +258,9 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
         v1.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v1.position)));
         v2.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v2.position)));
 
-        v0.color = ctx->material_id == 0 ? 0xffff0000 : 0xffffffff;
-        v1.color = ctx->material_id == 0 ? 0xff00ff00 : 0xffffffff;
-        v2.color = ctx->material_id == 0 ? 0xff0000ff : 0xffffffff;
+        v0.color = 0xffffffff;
+        v1.color = 0xffffffff;
+        v2.color = 0xffffffff;
 
         if (ctx->cull_face) {
             vec3 a = vec3_sub(v1.position, v0.position);
@@ -313,7 +313,7 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
             
             draw_triangle(
                 ctx,
-                ctx->material_id == 0 ? SHADER_SGT : SHADER_SFT,
+                SHADER_SFT,
                 screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, tv0.color,
                 screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, tv1.color,
                 screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, tv2.color
@@ -342,210 +342,5 @@ void draw_triangle(
         case SHADER_SFC: {
             draw_triangle_sfc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
         } break;
-    }
-}
-
-
-void draw_triangle_scalar(
-        render_context *ctx,
-        float x0, float y0, float w0, float u0, float v0, u32 c0,
-        float x1, float y1, float w1, float u1, float v1, u32 c1,
-        float x2, float y2, float w2, float u2, float v2, u32 c2) {
-    float area = ((x2 - x0) * (y1 - y0)) - ((y2 - y0) * (x1 - x0));
-    if (area < 0) {
-        area = -area;
-        swap(x1,x2);
-        swap(y1,y2);
-        swap(w1,w2);
-        swap(u1,u2);
-        swap(v1,v2);
-        swap(c1,c2);
-    }
-
-    if (fabsf(area) < 1e-6f) return;
-
-    const int win_width = ctx->framebuffer.width;
-    const int win_height = ctx->framebuffer.height;
-
-    const int min_x_f = (int) floorf(fmin(fmin(x0, x1), x2));
-    const int min_y_f = (int) floorf(fmin(fmin(y0, y1), y2));
-    const int max_x_f = (int)  ceilf(fmax(fmax(x0, x1), x2));
-    const int max_y_f = (int)  ceilf(fmax(fmax(y0, y1), y2));
-
-    const int clamped_min_x = (min_x_f < 0) ? 0 : min_x_f;
-    const int clamped_min_y = (min_y_f < 0) ? 0 : min_y_f;
-    const int clamped_max_x = (max_x_f >= win_width) ? (win_width - 1) : max_x_f;
-    const int clamped_max_y = (max_y_f >= win_height) ? (win_height - 1) : max_y_f;
-
-    if (clamped_min_x > clamped_max_x || clamped_min_y > clamped_max_y) return;
-
-    const float r0 = (float)((c0 >> 16) & 0xFF);
-    const float g0 = (float)((c0 >>  8) & 0xFF);
-    const float b0 = (float)( c0        & 0xFF);
-    const float r1 = (float)((c1 >> 16) & 0xFF);
-    const float g1 = (float)((c1 >>  8) & 0xFF);
-    const float b1 = (float)( c1        & 0xFF);
-    const float r2 = (float)((c2 >> 16) & 0xFF);
-    const float g2 = (float)((c2 >>  8) & 0xFF);
-    const float b2 = (float)( c2        & 0xFF);
-
-    const float rcp_area = 1.0f / area;
-    const float rcp_w0 = 1.0f / w0;
-    const float rcp_w1 = 1.0f / w1;
-    const float rcp_w2 = 1.0f / w2;
-    
-    const float dx0 = y2 - y1;
-    const float dy0 = x1 - x2;
-    const float dx1 = y0 - y2;
-    const float dy1 = x2 - x0;
-    const float dx2 = y1 - y0;
-    const float dy2 = x0 - x1;
-    
-    const float r0_persp = r0 * rcp_w0;
-    const float g0_persp = g0 * rcp_w0;
-    const float b0_persp = b0 * rcp_w0;
-    const float r1_persp = r1 * rcp_w1;
-    const float g1_persp = g1 * rcp_w1;
-    const float b1_persp = b1 * rcp_w1;
-    const float r2_persp = r2 * rcp_w2;
-    const float g2_persp = g2 * rcp_w2;
-    const float b2_persp = b2 * rcp_w2;
-    
-    const float u0_persp = u0 * rcp_w0;
-    const float u1_persp = u1 * rcp_w1;
-    const float u2_persp = u2 * rcp_w2;
-    const float v0_persp = v0 * rcp_w0;
-    const float v1_persp = v1 * rcp_w1;
-    const float v2_persp = v2 * rcp_w2;
-
-    const float depth_dx = rcp_area * (rcp_w0 * dx0 + rcp_w1 * dx1 + rcp_w2 * dx2);
-    const float depth_dy = rcp_area * (rcp_w0 * dy0 + rcp_w1 * dy1 + rcp_w2 * dy2);
-    const float u_dx = rcp_area * (u0_persp * dx0 + u1_persp * dx1 + u2_persp * dx2);
-    const float u_dy = rcp_area * (u0_persp * dy0 + u1_persp * dy1 + u2_persp * dy2);
-    const float v_dx = rcp_area * (v0_persp * dx0 + v1_persp * dx1 + v2_persp * dx2);
-    const float v_dy = rcp_area * (v0_persp * dy0 + v1_persp * dy1 + v2_persp * dy2);
-    const float r_dx = rcp_area * (r0_persp * dx0 + r1_persp * dx1 + r2_persp * dx2);
-    const float g_dx = rcp_area * (g0_persp * dx0 + g1_persp * dx1 + g2_persp * dx2);
-    const float b_dx = rcp_area * (b0_persp * dx0 + b1_persp * dx1 + b2_persp * dx2);
-    const float r_dy = rcp_area * (r0_persp * dy0 + r1_persp * dy1 + r2_persp * dy2);
-    const float g_dy = rcp_area * (g0_persp * dy0 + g1_persp * dy1 + g2_persp * dy2);
-    const float b_dy = rcp_area * (b0_persp * dy0 + b1_persp * dy1 + b2_persp * dy2);
-   
-    const float psx = clamped_min_x+0.5f;
-    const float psy = clamped_min_y+0.5f;
-    float w0_row = (psx - x1) * (y2 - y1) - (psy - y1) * (x2 - x1);
-    float w1_row = (psx - x2) * (y0 - y2) - (psy - y2) * (x0 - x2);
-    float w2_row = (psx - x0) * (y1 - y0) - (psy - y0) * (x1 - x0);
-    float depth_recip_row = rcp_area * (rcp_w0 * w0_row + rcp_w1 * w1_row + rcp_w2 * w2_row);
-    float u_row = rcp_area * (u0_persp * w0_row + u1_persp * w1_row + u2_persp * w2_row);
-    float v_row = rcp_area * (v0_persp * w0_row + v1_persp * w1_row + v2_persp * w2_row);
-    float r_row = rcp_area * (r0_persp * w0_row + r1_persp * w1_row + r2_persp * w2_row);
-    float g_row = rcp_area * (g0_persp * w0_row + g1_persp * w1_row + g2_persp * w2_row);
-    float b_row = rcp_area * (b0_persp * w0_row + b1_persp * w1_row + b2_persp * w2_row);
-
-    texture_t *texture = m_get_texture(&ctx->material_manager, ctx->material_id);
-    if (!texture) return;
-    
-    const int tex_width = texture->width;
-    const int tex_height = texture->height;
-    const int tex_width_mask = tex_width - 1;
-    const int tex_height_mask = tex_height - 1;
-
-    intptr_t row_offset = clamped_min_y * win_width;
-    for (int y = clamped_min_y; y <= clamped_max_y; ++y) {
-        float* z_ptr = ctx->framebuffer.depth_buffer + row_offset + clamped_min_x;
-        u32* color_ptr = ctx->framebuffer.color_buffer + row_offset + clamped_min_x;
-
-        float w0_start = w0_row;
-        float w1_start = w1_row;
-        float w2_start = w2_row;
-        float u_start  = u_row;
-        float v_start  = v_row;
-        float r_start  = r_row;
-        float g_start  = g_row;
-        float b_start  = b_row;
-        float depth    = depth_recip_row;
-        
-        for (int x = clamped_min_x; x <= clamped_max_x; x++) {
-            if (w0_start < 0 || w1_start < 0 || w2_start < 0 || depth < *z_ptr) {
-                w0_start += dx0;
-                w1_start += dx1;
-                w2_start += dx2;
-                u_start  += u_dx;
-                v_start  += v_dx;
-                r_start  += r_dx;
-                g_start  += g_dx;
-                b_start  += b_dx;
-                depth    += depth_dx;
-                z_ptr++;
-                color_ptr++;
-                continue;
-            }
-
-            const float inv_w = 1.0f / depth;
-            const float u = u_start * inv_w;
-            const float v = v_start * inv_w;
-            const int  vr = r_start * inv_w;
-            const int  vg = g_start * inv_w;
-            const int  vb = b_start * inv_w;
-
-            const int tex_x = (int)(u * tex_width) & tex_width_mask;
-            const int tex_y = (int)(v * tex_height) & tex_height_mask;
-            const u8* texel = texture->data + (tex_y * tex_width + tex_x) * 4;
-
-            if (texel[3] == 0x00) {
-                w0_start += dx0;
-                w1_start += dx1;
-                w2_start += dx2;
-                u_start  += u_dx;
-                v_start  += v_dx;
-                r_start  += r_dx;
-                g_start  += g_dx;
-                b_start  += b_dx;
-                depth    += depth_dx;
-                z_ptr++;
-                color_ptr++;
-                continue;
-            }
-            
-            const u8 tr = texel[0];
-            const u8 tg = texel[1];
-            const u8 tb = texel[2];
-            
-            int mod_r = (tr*vr)>>8;
-            int mod_g = (tg*vg)>>8;
-            int mod_b = (tb*vb)>>8;
-            
-            mod_r = (mod_r < 0) ? 0 : (mod_r > 255) ? 255 : mod_r;
-            mod_g = (mod_g < 0) ? 0 : (mod_g > 255) ? 255 : mod_g;
-            mod_b = (mod_b < 0) ? 0 : (mod_b > 255) ? 255 : mod_b;
-            
-            *z_ptr = depth;
-            *color_ptr = 0xffu << 24 | mod_r << 16 | mod_g << 8 | mod_b;
-                        
-            w0_start += dx0;
-            w1_start += dx1;
-            w2_start += dx2;
-            u_start  += u_dx;
-            v_start  += v_dx;
-            r_start  += r_dx;
-            g_start  += g_dx;
-            b_start  += b_dx;
-            depth    += depth_dx;
-
-            z_ptr++;
-            color_ptr++;
-        }
-
-        w0_row += dy0;
-        w1_row += dy1;
-        w2_row += dy2;
-        u_row += u_dy;
-        v_row += v_dy;
-        r_row += r_dy;
-        g_row += g_dy;
-        b_row += b_dy;
-        depth_recip_row += depth_dy;
-        row_offset += win_width;
     }
 }
