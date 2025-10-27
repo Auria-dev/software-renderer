@@ -159,9 +159,31 @@ void RASTERIZER_NAME(
                     const int  vg = g_start * inv_w;
                     const int  vb = b_start * inv_w;
 
+#ifdef SAMPLE_BILINEAR // bilinear sampling
+                    const float tex_u = u * tex_width;
+                    const float tex_v = v * tex_height;
+                    const int tex_x0 = ((int)tex_u) & tex_width_mask;
+                    const int tex_y0 = ((int)tex_v) & tex_height_mask;
+                    const int tex_x1 = (tex_x0 + 1) & tex_width_mask;
+                    const int tex_y1 = (tex_y0 + 1) & tex_height_mask;
+                    const float frac_u = tex_u - floorf(tex_u);
+                    const float frac_v = tex_v - floorf(tex_v);
+                    const u8* texel00 = texture->data + (tex_y0 * tex_width + tex_x0) * 4;
+                    const u8* texel10 = texture->data + (tex_y0 * tex_width + tex_x1) * 4;
+                    const u8* texel01 = texture->data + (tex_y1 * tex_width + tex_x0) * 4;
+                    const u8* texel11 = texture->data + (tex_y1 * tex_width + tex_x1) * 4;
+                    u8 texel[4];
+                    for (int i = 0; i < 4; ++i) {
+                        float c0 = texel00[i] * (1.0f - frac_u) + texel10[i] * frac_u;
+                        float c1 = texel01[i] * (1.0f - frac_u) + texel11[i] * frac_u;
+                        float c = c0 * (1.0f - frac_v) + c1 * frac_v;
+                        texel[i] = (u8)(c + 0.5f);
+                    }
+#else // nearest-neighbor sampling
                     const int tex_x = (int)(u * tex_width) & tex_width_mask;
                     const int tex_y = (int)(v * tex_height) & tex_height_mask;
                     const u8* texel = texture->data + (tex_y * tex_width + tex_x) * 4;
+#endif // SAMPLE MODE
 
                     if (texel[3] != 0x00) {
                         const u8 tr = texel[0];
@@ -200,10 +222,32 @@ void RASTERIZER_NAME(
                     const float u = u_start * inv_w;
                     const float v = v_start * inv_w;
 
+#ifdef SAMPLE_BILINEAR // bilinear sampling
+                    const float tex_u = u * tex_width;
+                    const float tex_v = v * tex_height;
+                    const int tex_x0 = ((int)tex_u) & tex_width_mask;
+                    const int tex_y0 = ((int)tex_v) & tex_height_mask;
+                    const int tex_x1 = (tex_x0 + 1) & tex_width_mask;
+                    const int tex_y1 = (tex_y0 + 1) & tex_height_mask;
+                    const float frac_u = tex_u - floorf(tex_u);
+                    const float frac_v = tex_v - floorf(tex_v);
+                    const u8* texel00 = texture->data + (tex_y0 * tex_width + tex_x0) * 4;
+                    const u8* texel10 = texture->data + (tex_y0 * tex_width + tex_x1) * 4;
+                    const u8* texel01 = texture->data + (tex_y1 * tex_width + tex_x0) * 4;
+                    const u8* texel11 = texture->data + (tex_y1 * tex_width + tex_x1) * 4;
+                    u8 texel[4];
+                    for (int i = 0; i < 4; ++i) {
+                        float c0 = texel00[i] * (1.0f - frac_u) + texel10[i] * frac_u;
+                        float c1 = texel01[i] * (1.0f - frac_u) + texel11[i] * frac_u;
+                        float c = c0 * (1.0f - frac_v) + c1 * frac_v;
+                        texel[i] = (u8)(c + 0.5f);
+                    }
+#else // nearest-neighbor sampling
                     const int tex_x = (int)(u * tex_width) & tex_width_mask;
                     const int tex_y = (int)(v * tex_height) & tex_height_mask;
                     const u8* texel = texture->data + (tex_y * tex_width + tex_x) * 4;
-
+#endif // SAMPLE MODE
+                    
                     if (texel[3] != 0x00) {
                         int mod_r = (texel[0] * flat_r) >> 8;
                         int mod_g = (texel[1] * flat_g) >> 8;

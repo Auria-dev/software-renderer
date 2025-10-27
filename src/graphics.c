@@ -258,6 +258,7 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
         v1.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v1.position)));
         v2.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v2.position)));
 
+        // TODO: lighting
         v0.color = 0xffffffff;
         v1.color = 0xffffffff;
         v2.color = 0xffffffff;
@@ -307,13 +308,13 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
             float screen2_y = (pv2.y * (ctx->framebuffer.height / 2.0f)) + (ctx->framebuffer.height / 2.0f);
 
 
-            // draw_line(ctx, (int)screen0_x, (int)screen0_y, (int)screen1_x, (int)screen1_y, color);
-            // draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, color);
-            // draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, color);
+            // draw_line(ctx, (int)screen0_x, (int)screen0_y, (int)screen1_x, (int)screen1_y, tv0.color);
+            // draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, tv0.color);
+            // draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, tv0.color);
             
             draw_triangle(
                 ctx,
-                SHADER_SFT,
+                SHADER_SGT,
                 screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, tv0.color,
                 screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, tv1.color,
                 screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, tv2.color

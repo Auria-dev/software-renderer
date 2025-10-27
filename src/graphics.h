@@ -41,6 +41,7 @@ typedef enum {
     SHADER_SGC, // scalar gouraud colored
     SHADER_SFC, // scalar flat colored
     SHADER_SFT, // scalar flat textured
+    // TODO: simd
 } shader_type_t;
 
 typedef struct render_context {

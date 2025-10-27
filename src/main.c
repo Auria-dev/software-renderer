@@ -3,11 +3,14 @@
 #define RENDER_WIDTH 640
 #define RENDER_HEIGHT 480
 
+// #define SAMPLE_BILINEAR
+
 static bool running = false;
 static float delta_time = 0.0f;
 static vec2 mousepos;
 static vec3 cam_pos = {0,0,-1};
 static vec3 cam_rot = {0,0,0};
+static bool mouse_captured = false;
 
 struct movement {
     bool forward, backward;
@@ -57,6 +60,14 @@ void handle_event(int event, void *data) {
                 case KEY_DOWN:  movement.dlook    = false; break;
                 case KEY_LEFT:  movement.llook    = false; break;
                 case KEY_RIGHT: movement.rlook    = false; break;
+
+                case KEY_ENTER:
+                    mouse_captured = !mouse_captured;
+                    if (mouse_captured) {
+                        window_set_mouse_position(NULL, RENDER_WIDTH / 2, RENDER_HEIGHT / 2);
+                        window_show_cursor(NULL, mouse_captured);
+                    }
+                    break;
                 default: break;
             }
         } break;
@@ -81,7 +92,7 @@ int main(int argc, char *argv[]) {
     window_bind_framebuffer(win, &ctx.framebuffer);
 
     mesh_t mymodel = {0};
-    load_obj("assets/models/church.obj", &mymodel, &ctx.material_manager);
+    load_obj("assets/models/rock.obj", &mymodel, &ctx.material_manager);
 
     mymodel.position = (vec3){0,0,0};
     mymodel.rotation = (vec3){0,0,0};
@@ -101,11 +112,27 @@ int main(int argc, char *argv[]) {
         delta_time = (float)(current_time - last_frame_time);
         last_frame_time = current_time;
 
+        vec2 mouse_delta = {0};
+        if (mouse_captured) {
+            if (mousepos.x != -1 && mousepos.y != -1) {
+                mouse_delta.x = mousepos.x - (RENDER_WIDTH / 2);
+                mouse_delta.y = mousepos.y - (RENDER_HEIGHT / 2);
+                window_set_mouse_position(win, RENDER_WIDTH / 2, RENDER_HEIGHT / 2);
+            }
+            window_show_cursor(win, false);
+            
+            cam_rot.x += ( mouse_delta.y) * 0.002f;
+            cam_rot.y += (-mouse_delta.x) * 0.002f;
+        } else {
+            window_show_cursor(win, true);
+        }
+
         window_poll_events(win);
         if (movement.dlook)    cam_rot.x += 2.0f * delta_time;
         if (movement.ulook)    cam_rot.x -= 2.0f * delta_time;
         if (movement.llook)    cam_rot.y += 2.0f * delta_time;
         if (movement.rlook)    cam_rot.y -= 2.0f * delta_time;
+
 
         vec3 forward = { cosf(cam_rot.y-deg_to_rad(90)), 0, -sinf(cam_rot.y-deg_to_rad(90)) };
         vec3 right = {  sinf(cam_rot.y-deg_to_rad(90)), 0, cosf(cam_rot.y-deg_to_rad(90)) };
@@ -128,7 +155,7 @@ int main(int argc, char *argv[]) {
         vec3 up = vec4_to_vec3(mat4_mul_vec4(rotation_matrix, vec3_to_vec4(vec3_up())));
         g_update_view_matrix(&ctx, mat4_look_at(cam_pos, target, up));
 
-        memset(ctx.framebuffer.color_buffer, (int)0xff222222, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
+        memset(ctx.framebuffer.color_buffer, (int)0xff000000, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
         memset(ctx.framebuffer.depth_buffer, 0.0f, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(float));
 
         // mymodel.rotation.y += 0.5f * delta_time;

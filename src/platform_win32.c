@@ -251,6 +251,22 @@ void window_poll_events(window_t *window) {
     }
 }
 
+void window_set_mouse_position(window_t *w, int x, int y) {
+    if (!w) return;
+
+    POINT pt = { x, y };
+    ClientToScreen(w->hwnd, &pt);
+    SetCursorPos(pt.x, pt.y);
+}
+
+void window_show_cursor(window_t *w, bool visible) {
+    if (visible) {
+        while (ShowCursor(TRUE) < 0);
+    } else {
+        while (ShowCursor(FALSE) >= 0);
+    }
+}
+
 static void call_event(window_t *w, int event, void *data) {
     if (!w || !w->event_callback) return;
     w->event_callback(event, data);

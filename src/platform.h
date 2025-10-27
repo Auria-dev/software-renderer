@@ -88,6 +88,8 @@ void window_poll_events(window_t* window);
 void window_blit(window_t *w);
 void window_destroy(window_t* window);
 void window_set_title(window_t *w, const char* title);
+void window_set_mouse_position(window_t *w, int x, int y);
+void window_show_cursor(window_t *w, bool visible);
 
 void window_bind_framebuffer(window_t *w, framebuffer_t *fb);
 // TODO: window_render window_resize window_rename? and mouse capturing with events?
