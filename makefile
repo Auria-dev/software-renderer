@@ -1,5 +1,5 @@
 
-TARGET = main
+TARGET = renderer
 FLAGS = -Wall -std=c99 -flto -O3 -pedantic -march=native -ffast-math -funroll-loops -g
 
 SRC_DIR = src
@@ -15,7 +15,7 @@ ifeq ($(OS),Windows_NT)
     RMDIR = Remove-Item -Recurse -Force -Path
     RMFILE = Remove-Item -Force -Path
     MKDIR = mkdir
-    TARGET = main.exe
+    TARGET = renderer.exe
     SYS_LDFLAGS = -lgdi32 -luser32
     SYS_CFLAGS =
 else
@@ -23,7 +23,7 @@ else
     RMDIR = rm -rf
     RMFILE = rm -f
     MKDIR = mkdir -p
-    TARGET = main
+    TARGET = renderer
     SYS_LDFLAGS = -lX11 -lXext
     SYS_CFLAGS =
 endif
@@ -52,7 +52,7 @@ ifeq ($(OS),Windows_NT)
 	-$(RMFILE) $(TARGET)
 	-$(RMDIR) $(OBJ_DIR)
 else
-	-$(RMFILE) main main.exe
+	-$(RMFILE) renderer renderer.exe
 	-$(RMDIR) $(OBJ_DIR)
 endif
 

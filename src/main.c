@@ -3,8 +3,8 @@
 // #define RENDER_WIDTH 640
 // #define RENDER_HEIGHT 480
 
-#define RENDER_WIDTH 1920
-#define RENDER_HEIGHT 1080
+#define RENDER_WIDTH (1920 * 0.667)
+#define RENDER_HEIGHT (1080 * 0.667)
 
 // #define SAMPLE_BILINEAR
 
