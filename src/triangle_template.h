@@ -110,11 +110,9 @@ void RASTERIZER_NAME(
 #endif // RASTER_TEXTURE
 
 #if RASTER_TEXTURE == 1
-    // printf("debug: using manager=%p to fetch texture id=%u\n", (void*)&ctx->material_manager, ctx->material_id);
 
-    texture_t *texture = m_get_texture(&ctx->material_manager, ctx->material_id);
+    texture_t *texture = m_get_texture(ctx->material_manager, ctx->material_id);
     if (!texture) {
-        // printf("ERROR: Missing texture for material ID %d\n", ctx->material_id);
         return;
     }
     const int tex_width = texture->width;
@@ -264,7 +262,7 @@ void RASTERIZER_NAME(
                 }
 #endif // end of shader types
             }
-
+            
             w0_start += dx0;
             w1_start += dx1;
             w2_start += dx2;
@@ -304,3 +302,4 @@ void RASTERIZER_NAME(
 #undef RASTERIZER_NAME
 #undef RASTER_GOURAUD
 #undef RASTER_TEXTURE
+#undef SAMPLE_BILINEAR

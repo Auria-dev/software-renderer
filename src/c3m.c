@@ -85,6 +85,12 @@ vec3 vec3_div(vec3 v, float s) {
   };
 }
 
+vec3 vec3_mul(vec3 a, vec3 b) {
+  return (vec3) {
+    a.x * b.x, a.y * b.y, a.z * b.z
+  };
+}
+
 float vec3_dot(vec3 a, vec3 b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
@@ -487,6 +493,14 @@ mat3 mat3_inverse(mat3 m) {
     inv.m[2][2] = c22 * inv_det;
 
     return inv;
+}
+
+mat3 mat4_to_mat3(mat4 m) {
+    mat3 r;
+    r.m[0][0] = m.m[0][0]; r.m[0][1] = m.m[0][1]; r.m[0][2] = m.m[0][2];
+    r.m[1][0] = m.m[1][0]; r.m[1][1] = m.m[1][1]; r.m[1][2] = m.m[1][2];
+    r.m[2][0] = m.m[2][0]; r.m[2][1] = m.m[2][1]; r.m[2][2] = m.m[2][2];
+    return r;
 }
 
 mat4 mat4_identity(void) {

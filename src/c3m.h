@@ -68,6 +68,7 @@ vec3  vec3_add(vec3 a, vec3 b);
 vec3  vec3_sub(vec3 a, vec3 b);
 vec3  vec3_scale(vec3 v, float s);
 vec3  vec3_div(vec3 v, float s);
+vec3  vec3_mul(vec3 a, vec3 b);
 float vec3_dot(vec3 a, vec3 b);
 vec3  vec3_cross(vec3 a, vec3 b);
 float vec3_len_sq(vec3 v);
@@ -124,6 +125,7 @@ mat3  mat3_transpose(mat3 m);
 mat3  mat3_scale(mat3 m, float s);
 mat3  mat3_inverse_diagonal(mat3 m);
 mat3  mat3_inverse(mat3 m);
+mat3  mat4_to_mat3(mat4 m);
 
 mat4  mat4_identity(void);
 mat4  mat4_from_pos_quat(vec3 v, quat q);

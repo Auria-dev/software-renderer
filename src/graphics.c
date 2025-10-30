@@ -32,6 +32,42 @@
 #include "triangle_template.h"
 #endif
 
+// scalar, gouraud, textured, bilinear sampling
+#ifndef draw_triangle_sgtb
+#define RASTERIZER_NAME draw_triangle_sgtb
+#define RASTER_GOURAUD  1
+#define RASTER_TEXTURE  1
+#define SAMPLE_BILINEAR
+#include "triangle_template.h"
+#endif
+
+// scalar, gouraud, colored, bilinear sampling
+#ifndef draw_triangle_sgcb
+#define RASTERIZER_NAME draw_triangle_sgcb
+#define RASTER_GOURAUD  1
+#define RASTER_TEXTURE  0
+#define SAMPLE_BILINEAR
+#include "triangle_template.h"
+#endif
+
+// scalar, flat, textured, bilinear sampling
+#ifndef draw_triangle_sftb
+#define RASTERIZER_NAME draw_triangle_sftb
+#define RASTER_GOURAUD  0
+#define RASTER_TEXTURE  1
+#define SAMPLE_BILINEAR
+#include "triangle_template.h"
+#endif
+
+// scalar, flat, colored, bilinear sampling
+#ifndef draw_triangle_sfcb
+#define RASTERIZER_NAME draw_triangle_sfcb
+#define RASTER_GOURAUD  0
+#define RASTER_TEXTURE  0
+#define SAMPLE_BILINEAR
+#include "triangle_template.h"
+#endif
+
 render_context render_context_init(
     int width, int height,
     float fov, float aspect_ratio, float near, float far,
@@ -48,7 +84,6 @@ render_context render_context_init(
     ctx.index_buffer.data = NULL;
     ctx.index_buffer.size = 0;
     ctx.index_buffer.type = GBUFFER_INDEX;
-    ctx.material_manager = m_init();
     ctx.clip_near = near;
     ctx.clip_far = far;
     ctx.depth_test = enable_depth_test;
@@ -56,7 +91,9 @@ render_context render_context_init(
     ctx.cull_face = enable_cull_face;
     ctx.material_id = -1;
     ctx.frustum = frustum_init(fov, aspect_ratio, near, far);
-    ctx.material_manager = m_init();
+
+    ctx.material_manager = malloc(sizeof(material_manager_t));
+    *ctx.material_manager = m_init();
     return ctx;
 }
 
@@ -193,6 +230,20 @@ void draw_line_depth(render_context *ctx, vec3 p0, vec3 p1, uint32_t color) {
     }
 }
 
+// helper functions
+static u32 pack_color(vec3 color) {
+    // Clamp color to valid 0.0-1.0 range
+    color.x = fmax(0.0f, fmin(1.0f, color.x));
+    color.y = fmax(0.0f, fmin(1.0f, color.y));
+    color.z = fmax(0.0f, fmin(1.0f, color.z));
+
+    u32 r = (u32)(color.x * 255.0f);
+    u32 g = (u32)(color.y * 255.0f);
+    u32 b = (u32)(color.z * 255.0f);
+    
+    return (0xFF << 24) | (r << 16) | (g << 8) | b;
+}
+
 void g_update_projection_matrix(render_context *ctx, float fov, float ar) {
     ctx->projection_matrix = mat4_make_perspective(deg_to_rad(fov), ar, ctx->clip_near, ctx->clip_far);
 }
@@ -216,6 +267,10 @@ void g_update_world_matrix(render_context *ctx, vec3 position, vec3 rotation, ve
     world_matrix = mat4_mul_mat4(position_matrix, world_matrix);
 
     ctx->world_matrix = world_matrix;
+}
+
+void g_set_bilinear_sampling(render_context *ctx, bool enabled) {
+    ctx->bilinear_sampling = enabled;
 }
 
 void g_bind_material(render_context *ctx, int material_id) {
@@ -242,7 +297,69 @@ void g_bind_buffer(render_context *ctx, u32 type, void *data, size_t size) {
     }
 }
 
+void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type) {
+    g_update_world_matrix(ctx, mesh->position, mesh->rotation, mesh->scale);
+
+    for (int i = 0; i < mesh->submesh_count; i++) {
+        submesh_t* sub = &mesh->submeshes[i];
+
+        material_t* mat = m_get_material(ctx->material_manager, sub->material_id);
+        ctx->current_material = mat; // set for g_draw_elements
+        bool has_texture = (mat && mat->diffuse_map_id != -1);
+
+        // TODO: flag system to not have to deal with SGT, SGC, SFT, SFC manually
+        if (has_texture) {
+            ctx->current_texture = m_get_texture(ctx->material_manager, mat->diffuse_map_id);
+
+            if (type == MESH_GOURAUD) 
+                ctx->current_shader = SHADER_SGT;
+            else
+                ctx->current_shader = SHADER_SFT;
+            
+        } else {
+            ctx->current_texture = NULL;
+            
+            if (type == MESH_GOURAUD) 
+                ctx->current_shader = SHADER_SGC;
+            else 
+                ctx->current_shader = SHADER_SFC;
+        }
+
+        g_bind_material(ctx, sub->material_id);
+        g_bind_buffer(ctx, GBUFFER_VERTEX, mesh->vertices, mesh->vertex_count * sizeof(vertex_t));
+        g_bind_buffer(ctx, GBUFFER_INDEX, sub->indices, sub->index_count * sizeof(u32));
+
+        g_draw_elements(ctx, sub->index_count, sub->indices);
+    }
+
+    // unbind
+    ctx->current_material = NULL;
+    ctx->current_texture = NULL;
+}
+
 void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
+    material_t* mat = ctx->current_material;
+    
+    material_t default_mat = {
+        .ambient = {0.1f, 0.1f, 0.1f},
+        .diffuse = {1.0f, 1.0f, 1.0f},
+        .specular = {1.0f, 1.0f, 1.0f},
+        .shininess = 32.0f,
+        .diffuse_map_id = -1
+    };
+
+    if (!mat) {
+        mat = &default_mat;
+        printf("DEBUG: g_draw_elements: using default material\n");
+    } 
+    
+    vec3 light_dir_view = vec3_normalize((vec3){0.5f, 0.5f, -1.0f});
+    vec3 ambient_light_color = (vec3){0.2f, 0.2f, 0.2f};
+    vec3 diffuse_light_color = (vec3){0.8f, 0.8f, 0.8f};
+    
+    mat4 transform = mat4_mul_mat4(ctx->view_matrix, ctx->world_matrix);
+    mat3 normal_matrix = mat4_to_mat3(mat4_transpose(mat4_inverse(transform)));
+
     for (u32 i = 0; i < count; i += 3) {
         u32 vi0 = indices[i+0];
         u32 vi1 = indices[i+1];
@@ -252,24 +369,79 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
         vertex_t v1 = ((vertex_t*)ctx->vertex_buffer.data)[vi1];
         vertex_t v2 = ((vertex_t*)ctx->vertex_buffer.data)[vi2];
 
-        // Apply world and view transformations
-        mat4 transform = mat4_mul_mat4(ctx->view_matrix, ctx->world_matrix);
+        // apply world and view transformations
         v0.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v0.position)));
         v1.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v1.position)));
         v2.position = vec4_to_vec3(mat4_mul_vec4(transform, vec3_to_vec4(v2.position)));
 
-        // TODO: lighting
-        v0.color = 0xffffffff;
-        v1.color = 0xffffffff;
-        v2.color = 0xffffffff;
+        vec3 a = vec3_sub(v1.position, v0.position);
+        vec3 b = vec3_sub(v2.position, v0.position);
+        vec3 face_normal = vec3_normalize(vec3_cross(a, b));
 
         if (ctx->cull_face) {
-            vec3 a = vec3_sub(v1.position, v0.position);
-            vec3 b = vec3_sub(v2.position, v0.position);
-            vec3 normal = vec3_normalize(vec3_cross(a, b));
             vec3 view_dir = vec3_normalize(v0.position);
-            if (vec3_dot(normal, view_dir) > 0) {
+            if (vec3_dot(face_normal, view_dir) > 0) {
                 continue;
+            }
+        }
+
+        v0.color = 0xff00ff00;
+        v1.color = 0xff00ff00;
+        v2.color = 0xff00ff00;
+
+        switch (ctx->current_shader) {
+            
+            case SHADER_SGC: {
+                vec3 n0 = vec3_normalize(mat3_mul_vec3(normal_matrix, v0.normal));
+                vec3 n1 = vec3_normalize(mat3_mul_vec3(normal_matrix, v1.normal));
+                vec3 n2 = vec3_normalize(mat3_mul_vec3(normal_matrix, v2.normal));
+
+                vec3 amb = vec3_mul(mat->ambient, ambient_light_color);
+                
+                vec3 c0_f = vec3_add(amb, vec3_scale(vec3_mul(mat->diffuse, diffuse_light_color), fmax(0.0, vec3_dot(n0, light_dir_view))));
+                vec3 c1_f = vec3_add(amb, vec3_scale(vec3_mul(mat->diffuse, diffuse_light_color), fmax(0.0, vec3_dot(n1, light_dir_view))));
+                vec3 c2_f = vec3_add(amb, vec3_scale(vec3_mul(mat->diffuse, diffuse_light_color), fmax(0.0, vec3_dot(n2, light_dir_view))));
+                
+                v0.color = pack_color(c0_f);
+                v1.color = pack_color(c1_f);
+                v2.color = pack_color(c2_f);
+                break;
+            }
+
+            case SHADER_SFC: {
+                vec3 amb = vec3_mul(mat->ambient, ambient_light_color);
+                vec3 c_f = vec3_add(amb, vec3_scale(vec3_mul(mat->diffuse, diffuse_light_color), fmax(0.0, vec3_dot(face_normal, light_dir_view))));
+                
+                u32 face_color = pack_color(c_f);
+                v0.color = face_color;
+                v1.color = face_color;
+                v2.color = face_color;
+                break;
+            }
+
+            case SHADER_SGT: {
+                vec3 n0 = vec3_normalize(mat3_mul_vec3(normal_matrix, v0.normal));
+                vec3 n1 = vec3_normalize(mat3_mul_vec3(normal_matrix, v1.normal));
+                vec3 n2 = vec3_normalize(mat3_mul_vec3(normal_matrix, v2.normal));
+
+                vec3 c0_f = vec3_add(ambient_light_color, vec3_scale(diffuse_light_color, fmax(0.0, vec3_dot(n0, light_dir_view))));
+                vec3 c1_f = vec3_add(ambient_light_color, vec3_scale(diffuse_light_color, fmax(0.0, vec3_dot(n1, light_dir_view))));
+                vec3 c2_f = vec3_add(ambient_light_color, vec3_scale(diffuse_light_color, fmax(0.0, vec3_dot(n2, light_dir_view))));
+
+                v0.color = pack_color(c0_f);
+                v1.color = pack_color(c1_f);
+                v2.color = pack_color(c2_f);
+                break;
+            }
+
+            case SHADER_SFT: {
+                vec3 c_f = vec3_add(ambient_light_color, vec3_scale(diffuse_light_color, fmax(0.0, vec3_dot(face_normal, light_dir_view))));
+                
+                u32 face_color = pack_color(c_f);
+                v0.color = face_color;
+                v1.color = face_color;
+                v2.color = face_color;
+                break;
             }
         }
 
@@ -307,14 +479,13 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
             float screen2_x = (pv2.x * (ctx->framebuffer.width  / 2.0f)) + (ctx->framebuffer.width  / 2.0f);
             float screen2_y = (pv2.y * (ctx->framebuffer.height / 2.0f)) + (ctx->framebuffer.height / 2.0f);
 
-
             // draw_line(ctx, (int)screen0_x, (int)screen0_y, (int)screen1_x, (int)screen1_y, tv0.color);
-            // draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, tv0.color);
-            // draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, tv0.color);
-            
+            // draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, tv1.color);
+            // draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, tv2.color);
+
             draw_triangle(
                 ctx,
-                SHADER_SGT,
+                ctx->current_shader,
                 screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, tv0.color,
                 screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, tv1.color,
                 screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, tv2.color
@@ -330,18 +501,35 @@ void draw_triangle(
     float x1, float y1, float w1, float u1, float v1, u32 c1,
     float x2, float y2, float w2, float u2, float v2, u32 c2) {
     
-    switch (shader_type) {
-        case SHADER_SGT: {
-            draw_triangle_sgt(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
-        } break;
-        case SHADER_SGC: {
-            draw_triangle_sgc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
-        } break;
-        case SHADER_SFT: {
-            draw_triangle_sft(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
-        } break;
-        case SHADER_SFC: {
-            draw_triangle_sfc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
-        } break;
+    if (ctx->bilinear_sampling) {
+        switch (shader_type) {
+            case SHADER_SGT: {
+                draw_triangle_sgtb(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+            case SHADER_SGC: {
+                draw_triangle_sgcb(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+            case SHADER_SFT: {
+                draw_triangle_sftb(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+            case SHADER_SFC: {
+                draw_triangle_sfcb(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+        }
+    } else {
+        switch (shader_type) {
+            case SHADER_SGT: {
+                draw_triangle_sgt(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+            case SHADER_SGC: {
+                draw_triangle_sgc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+            case SHADER_SFT: {
+                draw_triangle_sft(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+            case SHADER_SFC: {
+                draw_triangle_sfc(ctx, x0, y0, w0, u0, v0, c0, x1, y1, w1, u1, v1, c1, x2, y2, w2, u2, v2, c2);
+            } break;
+        }
     }
 }

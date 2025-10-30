@@ -1,7 +1,10 @@
 #include "main.h"
 
-#define RENDER_WIDTH 640
-#define RENDER_HEIGHT 480
+// #define RENDER_WIDTH 640
+// #define RENDER_HEIGHT 480
+
+#define RENDER_WIDTH 1920
+#define RENDER_HEIGHT 1080
 
 // #define SAMPLE_BILINEAR
 
@@ -85,18 +88,23 @@ int main(int argc, char *argv[]) {
 
     render_context ctx = render_context_init(
         RENDER_WIDTH, RENDER_HEIGHT,
-        70.0f, (float)RENDER_WIDTH / (float)RENDER_HEIGHT, 0.1f, 100.0f,
+        70.0f, (float)RENDER_WIDTH / (float)RENDER_HEIGHT, 0.1f, 1000.0f,
         (vec3){0,0,5}, (vec3){0,0,0}, (vec3){0,1,0},
         true, false, true
     );
     window_bind_framebuffer(win, &ctx.framebuffer);
 
-    mesh_t mymodel = {0};
-    load_obj("assets/models/rock.obj", &mymodel, &ctx.material_manager);
+    mesh_t camera = {0};
+    load_obj("assets/models/Camera_01_1k.obj", &camera, ctx.material_manager);
+    camera.position = (vec3){0,-1,0};
+    camera.rotation = (vec3){0,32,0};
+    camera.scale    = (vec3){10,10,10};
 
-    mymodel.position = (vec3){0,0,0};
-    mymodel.rotation = (vec3){0,0,0};
-    mymodel.scale    = (vec3){1,1,1};
+    mesh_t floor = {0};
+    load_obj("assets/models/dirt_1k.obj", &floor, ctx.material_manager);
+    floor.position = (vec3){0,-1,0};
+    floor.rotation = (vec3){0,0,0};
+    floor.scale    = (vec3){1,1,1};
 
     // setup render context matrices
     g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
@@ -112,27 +120,11 @@ int main(int argc, char *argv[]) {
         delta_time = (float)(current_time - last_frame_time);
         last_frame_time = current_time;
 
-        vec2 mouse_delta = {0};
-        if (mouse_captured) {
-            if (mousepos.x != -1 && mousepos.y != -1) {
-                mouse_delta.x = mousepos.x - (RENDER_WIDTH / 2);
-                mouse_delta.y = mousepos.y - (RENDER_HEIGHT / 2);
-                window_set_mouse_position(win, RENDER_WIDTH / 2, RENDER_HEIGHT / 2);
-            }
-            window_show_cursor(win, false);
-            
-            cam_rot.x += ( mouse_delta.y) * 0.002f;
-            cam_rot.y += (-mouse_delta.x) * 0.002f;
-        } else {
-            window_show_cursor(win, true);
-        }
-
         window_poll_events(win);
         if (movement.dlook)    cam_rot.x += 2.0f * delta_time;
         if (movement.ulook)    cam_rot.x -= 2.0f * delta_time;
         if (movement.llook)    cam_rot.y += 2.0f * delta_time;
         if (movement.rlook)    cam_rot.y -= 2.0f * delta_time;
-
 
         vec3 forward = { cosf(cam_rot.y-deg_to_rad(90)), 0, -sinf(cam_rot.y-deg_to_rad(90)) };
         vec3 right = {  sinf(cam_rot.y-deg_to_rad(90)), 0, cosf(cam_rot.y-deg_to_rad(90)) };
@@ -155,22 +147,13 @@ int main(int argc, char *argv[]) {
         vec3 up = vec4_to_vec3(mat4_mul_vec4(rotation_matrix, vec3_to_vec4(vec3_up())));
         g_update_view_matrix(&ctx, mat4_look_at(cam_pos, target, up));
 
-        memset(ctx.framebuffer.color_buffer, (int)0xff000000, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
+        memset(ctx.framebuffer.color_buffer, (int)0xff292d35, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
         memset(ctx.framebuffer.depth_buffer, 0.0f, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(float));
 
-        // mymodel.rotation.y += 0.5f * delta_time;
-        // mymodel.rotation.x += 0.1f * delta_time;
+        g_set_bilinear_sampling(&ctx, true);
 
-        // draw loaded model
-        g_update_world_matrix(&ctx, mymodel.position, mymodel.rotation, mymodel.scale);
-        for (int i = 0; i < mymodel.submesh_count; i++) {
-            submesh_t *sm = &mymodel.submeshes[i];
-            g_bind_material(&ctx, sm->material_id);
-            g_bind_buffer(&ctx, GBUFFER_VERTEX, mymodel.vertices, mymodel.vertex_count * sizeof(vertex_t));
-            g_bind_buffer(&ctx, GBUFFER_INDEX, sm->indices, sm->index_count * sizeof(u32));
-
-            g_draw_elements(&ctx, sm->index_count, sm->indices);
-        }
+        g_draw_mesh(&ctx, &floor, MESH_GOURAUD);
+        g_draw_mesh(&ctx, &camera, MESH_GOURAUD);
 
         window_blit(win);
         frame_count++;
@@ -185,9 +168,12 @@ int main(int argc, char *argv[]) {
             snprintf(title, 64, "software renderer - fps: %d", last_fps);
             window_set_title(win, title);
         }
+
+        // print cam pos/rot
+        // printf("cam pos: %.2f, %.2f, %.2f | rot: %.2f, %.2f, %.2f\r", cam_pos.x, cam_pos.y, cam_pos.z, cam_rot.x, cam_rot.y, cam_rot.z);
     }
 
-    m_free(&ctx.material_manager);
+    m_free(ctx.material_manager);
     window_destroy(win);
     return 0;
 }

@@ -88,7 +88,7 @@ void load_obj(const char* path, mesh_t* mesh, material_manager_t* m) {
             int material_id = -1;
             for (int i = 0; i < material_lookup_count; i++) {
                 if (strcmp(material_lookups[i].name, mtl_name) == 0) {
-                    material_id = material_lookups[i].texture_id;
+                    material_id = material_lookups[i].material_id;
                     break;
                 }
             }
@@ -161,7 +161,7 @@ int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, m
     }
 
     material_lookup_t* lookups = NULL;
-    material_lookup_t* current_lookup = NULL;
+    material_t* current_material = NULL;
     char line[1024];
 
     while (fgets(line, sizeof(line), file)) {
@@ -170,14 +170,40 @@ int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, m
 
         if (strncmp(trimmed, "newmtl ", 7) == 0) {
             material_lookup_t new_lookup;
-            new_lookup.texture_id = -1; // default to no texture
             strncpy(new_lookup.name, trimmed + 7, sizeof(new_lookup.name) - 1);
             new_lookup.name[sizeof(new_lookup.name) - 1] = '\0';
 
+            int new_mat_id = m_create_material(m, new_lookup.name);
+            new_lookup.material_id = new_mat_id;
+            
             array_push(lookups, new_lookup);
-            current_lookup = &lookups[array_length(lookups) - 1];
+            current_material = m_get_material(m, new_mat_id);
+            printf("\n\nDEBUG: load_mtl: material: Found new material '%s' with ID %d\n", new_lookup.name, new_mat_id);
 
-        } else if (current_lookup && strncmp(trimmed, "map_Kd ", 7) == 0) {
+        } else if (current_material && strncmp(trimmed, "Ka ", 3) == 0) {
+            sscanf(trimmed + 3, "%f %f %f", 
+                   &current_material->ambient.x, 
+                   &current_material->ambient.y, 
+                   &current_material->ambient.z);
+            printf("- DEBUG: load_mtl: material: Found ambient color\n");
+        } else if (current_material && strncmp(trimmed, "Kd ", 3) == 0) {
+            sscanf(trimmed + 3, "%f %f %f", 
+                   &current_material->diffuse.x, 
+                   &current_material->diffuse.y, 
+                   &current_material->diffuse.z);
+            printf("- DEBUG: load_mtl: material: Found diffuse color\n");
+        } else if (current_material && strncmp(trimmed, "Ks ", 3) == 0) {
+            sscanf(trimmed + 3, "%f %f %f", 
+                   &current_material->specular.x, 
+                   &current_material->specular.y, 
+                   &current_material->specular.z);
+            printf("- DEBUG: load_mtl: material: Found specular color\n");
+        } else if (current_material && strncmp(trimmed, "Ns ", 3) == 0) {
+            sscanf(trimmed + 3, "%f", &current_material->shininess);
+            printf("- DEBUG: load_mtl: material: Found shininess\n");
+        } else if (current_material && strncmp(trimmed, "map_Kd ", 7) == 0) {
+            printf("- DEBUG: load_mtl: material: Found diffuse texture map\n");
+
             char texture_filename[256];
             strncpy(texture_filename, trimmed + 7, sizeof(texture_filename) - 1);
             texture_filename[sizeof(texture_filename) - 1] = '\0';
@@ -191,10 +217,11 @@ int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, m
 
             if (data) {
                 int texture_id = m_create_texture(m, width, height, channels, data);
-                current_lookup->texture_id = texture_id;
-                printf("DEBUG: load_mtl: created texture id=%d for material='%s' manager=%p\n", texture_id, current_lookup->name, (void*)m);
+                current_material->diffuse_map_id = texture_id;
+                if (texture_id != -1) m->texture_used[texture_id] = true;
+                printf("- DEBUG: load_mtl: material: created texture id=%d\n", texture_id);
             } else {
-                 printf("WARNING: Failed to load texture: %s\n", texture_path);
+                printf("- WARNING: load_mtl: material: Failed to load texture: %s\n", texture_path);
             }
         }
     }
@@ -202,16 +229,4 @@ int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, m
     fclose(file);
     *lookup_table_out = lookups;
     return array_length(lookups);
-}
-
-texture_t parse_png_file(const char *filepath) {
-    return (texture_t){0};
-}
-
-texture_t parse_jpg_file(const char *filepath) {
-    return (texture_t){0};
-}
-
-texture_t parse_bmp_file(const char *filepath) {
-    return (texture_t){0};
 }
