@@ -5,8 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_TEXTURES 64
-#define MAX_MATERIALS 64
+#define MAX_TEXTURES 128
+#define MAX_MATERIALS 128
 
 typedef struct {
   int width, height;
@@ -21,6 +21,8 @@ typedef struct {
     vec3 specular;      // Ks
     float shininess;    // Ns
     int diffuse_map_id; // map_Kd (this is an ID into the textures array)
+
+    u32 color;  // debug material color
 } material_t;
 
 typedef struct {

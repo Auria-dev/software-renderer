@@ -59,6 +59,9 @@ void load_obj(const char* path, mesh_t* mesh, material_manager_t* m) {
         char* trimmed = trim_whitespace(line);
         if (strlen(trimmed) == 0) continue;
 
+        // skip comments
+        if (trimmed[0] == '#') continue;
+
         if (strncmp(trimmed, "v ", 2) == 0) {
             vec3 pos;
             sscanf(trimmed + 2, "%f %f %f", &pos.x, &pos.y, &pos.z);
@@ -178,7 +181,7 @@ int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, m
             
             array_push(lookups, new_lookup);
             current_material = m_get_material(m, new_mat_id);
-            printf("\n\nDEBUG: load_mtl: material: Found new material '%s' with ID %d\n", new_lookup.name, new_mat_id);
+            printf("DEBUG: load_mtl: material: Found new material '%s' with ID %d\n", new_lookup.name, new_mat_id);
 
         } else if (current_material && strncmp(trimmed, "Ka ", 3) == 0) {
             sscanf(trimmed + 3, "%f %f %f", 
@@ -225,7 +228,7 @@ int load_mtl(const char* mtl_path, const char* obj_dir, material_manager_t* m, m
             }
         }
     }
-
+    printf("\n");
     fclose(file);
     *lookup_table_out = lookups;
     return array_length(lookups);

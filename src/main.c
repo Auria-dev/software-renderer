@@ -1,19 +1,30 @@
 #include "main.h"
 
-// #define RENDER_WIDTH 640
-// #define RENDER_HEIGHT 480
+#define RENDER_WIDTH 640
+#define RENDER_HEIGHT 480
 
-#define RENDER_WIDTH (1920 * 0.667)
-#define RENDER_HEIGHT (1080 * 0.667)
-
-// #define SAMPLE_BILINEAR
+// #define RENDER_WIDTH 1280
+// #define RENDER_HEIGHT 720
 
 static bool running = false;
 static float delta_time = 0.0f;
 static vec2 mousepos;
-static vec3 cam_pos = {0,0,-1};
-static vec3 cam_rot = {0,0,0};
+static vec3 cam_pos = {9.8, 25.9, -103.5};
+static vec3 cam_rot = {-0.14,-0.01,0};
+
+// static vec3 orbit_target = {0.0f, 22.0f, 0.0f};
+// static float orbit_radius = 0.0f;
+// static float orbit_height = 0.0f;
+// static float orbit_angle = 0.0f;
+// static float orbit_speed = 0.5f;
+
 static bool mouse_captured = false;
+
+// 0: wireframe
+// 1: depth buffer
+// 2: normal
+// 3: flat color (one per material)
+static int render_mode = 0;
 
 struct movement {
     bool forward, backward;
@@ -45,6 +56,24 @@ void handle_event(int event, void *data) {
                 case KEY_DOWN:  movement.dlook    = true; break;
                 case KEY_LEFT:  movement.llook    = true; break;
                 case KEY_RIGHT: movement.rlook    = true; break;
+
+                case KEY_1:
+                    render_mode = 0;
+                    printf("Render mode: Textured\n");
+                    break;
+                case KEY_2:
+                    render_mode = 1;
+                    printf("Render mode: Materials\n");
+                    break;
+                case KEY_3:
+                    render_mode = 2;
+                    printf("Render mode: Wireframe\n");
+                    break;
+                case KEY_4:
+                    render_mode = 3;
+                    printf("Render mode: Face normals\n");
+                    break;
+
                 default: break;
             }
         } break;
@@ -57,20 +86,20 @@ void handle_event(int event, void *data) {
                 case KEY_D:     movement.right    = false; break;
                 case KEY_SPACE: movement.up       = false; break;
                 case KEY_SHIFT: movement.down     = false; break;
-
+                
                 // arrow keys look
                 case KEY_UP:    movement.ulook    = false; break;
                 case KEY_DOWN:  movement.dlook    = false; break;
                 case KEY_LEFT:  movement.llook    = false; break;
                 case KEY_RIGHT: movement.rlook    = false; break;
-
+                
                 case KEY_ENTER:
-                    mouse_captured = !mouse_captured;
-                    if (mouse_captured) {
-                        window_set_mouse_position(NULL, RENDER_WIDTH / 2, RENDER_HEIGHT / 2);
-                        window_show_cursor(NULL, mouse_captured);
-                    }
-                    break;
+                mouse_captured = !mouse_captured;
+                if (mouse_captured) {
+                    window_set_mouse_position(NULL, RENDER_WIDTH / 2, RENDER_HEIGHT / 2);
+                    window_show_cursor(NULL, mouse_captured);
+                } break;
+
                 default: break;
             }
         } break;
@@ -94,17 +123,17 @@ int main(int argc, char *argv[]) {
     );
     window_bind_framebuffer(win, &ctx.framebuffer);
 
-    mesh_t camera = {0};
-    load_obj("assets/models/Camera_01_1k.obj", &camera, ctx.material_manager);
-    camera.position = (vec3){0,-1,0};
-    camera.rotation = (vec3){0,32,0};
-    camera.scale    = (vec3){10,10,10};
+    mesh_t knight_model = {0};
+    load_obj("assets/models/lighthouse.obj", &knight_model, ctx.material_manager);
+    knight_model.position = (vec3){0,-1,0};
+    knight_model.rotation = (vec3){0,32,0};
+    knight_model.scale    = (vec3){10,10,10};
 
-    mesh_t floor = {0};
-    load_obj("assets/models/dirt_1k.obj", &floor, ctx.material_manager);
-    floor.position = (vec3){0,-1,0};
-    floor.rotation = (vec3){0,0,0};
-    floor.scale    = (vec3){1,1,1};
+    // camera orbit setup
+    // vec3 offset = vec3_sub(cam_pos, orbit_target);
+    // orbit_radius = sqrtf(offset.x * offset.x + offset.z * offset.z) + 8.0f;
+    // orbit_height = cam_pos.y + 10.0f; 
+    // orbit_angle = atan2f(offset.z, offset.x);
 
     // setup render context matrices
     g_update_projection_matrix(&ctx, 70.0f, (float)ctx.framebuffer.height / (float)ctx.framebuffer.width);
@@ -130,12 +159,13 @@ int main(int argc, char *argv[]) {
         vec3 right = {  sinf(cam_rot.y-deg_to_rad(90)), 0, cosf(cam_rot.y-deg_to_rad(90)) };
         forward = vec3_normalize(forward);
         right = vec3_normalize(right);
-        if (movement.forward)  cam_pos = vec3_add(cam_pos, vec3_scale(forward, 5.0f * delta_time));
-        if (movement.backward) cam_pos = vec3_sub(cam_pos, vec3_scale(forward, 5.0f * delta_time));
-        if (movement.left)     cam_pos = vec3_sub(cam_pos, vec3_scale(right, 5.0f * delta_time));
-        if (movement.right)    cam_pos = vec3_add(cam_pos, vec3_scale(right, 5.0f * delta_time));
-        if (movement.up)       cam_pos.y += 5.0f * delta_time;
-        if (movement.down)     cam_pos.y -= 5.0f * delta_time;
+        float move_speed = 21.0f;
+        if (movement.forward)  cam_pos = vec3_add(cam_pos, vec3_scale(forward, move_speed * delta_time));
+        if (movement.backward) cam_pos = vec3_sub(cam_pos, vec3_scale(forward, move_speed * delta_time));
+        if (movement.left)     cam_pos = vec3_sub(cam_pos, vec3_scale(right, move_speed * delta_time));
+        if (movement.right)    cam_pos = vec3_add(cam_pos, vec3_scale(right, move_speed * delta_time));
+        if (movement.up)       cam_pos.y += move_speed * delta_time;
+        if (movement.down)     cam_pos.y -= move_speed * delta_time;
 
         vec3 target = vec3_forward();
         mat4 cam_rot_x = mat4_make_rotation_x(cam_rot.x);
@@ -147,13 +177,18 @@ int main(int argc, char *argv[]) {
         vec3 up = vec4_to_vec3(mat4_mul_vec4(rotation_matrix, vec3_to_vec4(vec3_up())));
         g_update_view_matrix(&ctx, mat4_look_at(cam_pos, target, up));
 
-        memset(ctx.framebuffer.color_buffer, (int)0xff292d35, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(u32));
+        // orbit_angle += orbit_speed * delta_time;
+        // cam_pos.x = orbit_target.x + orbit_radius * cosf(orbit_angle);
+        // cam_pos.z = orbit_target.z + orbit_radius * sinf(orbit_angle);
+        // cam_pos.y = orbit_height;
+        // g_update_view_matrix(&ctx, mat4_look_at(cam_pos, orbit_target, vec3_up()));
+
+        for (int i = 0; i < ctx.framebuffer.width * ctx.framebuffer.height; i++) ctx.framebuffer.color_buffer[i] = 0xff6fa29e;
         memset(ctx.framebuffer.depth_buffer, 0.0f, ctx.framebuffer.width * ctx.framebuffer.height * sizeof(float));
 
         g_set_bilinear_sampling(&ctx, true);
 
-        g_draw_mesh(&ctx, &floor, MESH_GOURAUD);
-        g_draw_mesh(&ctx, &camera, MESH_GOURAUD);
+        g_draw_mesh(&ctx, &knight_model, MESH_GOURAUD, render_mode);
 
         window_blit(win);
         frame_count++;
@@ -168,9 +203,6 @@ int main(int argc, char *argv[]) {
             snprintf(title, 64, "software renderer - fps: %d", last_fps);
             window_set_title(win, title);
         }
-
-        // print cam pos/rot
-        // printf("cam pos: %.2f, %.2f, %.2f | rot: %.2f, %.2f, %.2f\r", cam_pos.x, cam_pos.y, cam_pos.z, cam_rot.x, cam_rot.y, cam_rot.z);
     }
 
     m_free(ctx.material_manager);

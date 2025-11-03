@@ -183,7 +183,7 @@ void RASTERIZER_NAME(
                     const u8* texel = texture->data + (tex_y * tex_width + tex_x) * 4;
 #endif // SAMPLE MODE
 
-                    if (texel[3] != 0x00) {
+                    if (texel[3] != 0x00) { // TODO: blending
                         const u8 tr = texel[0];
                         const u8 tg = texel[1];
                         const u8 tb = texel[2];

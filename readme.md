@@ -2,6 +2,10 @@
 
 this project is a software-based 3d renderer implemented entirely in c99. it mimics the functionality of a modern graphics api such as opengl, but executes fully on the cpu. the renderer is built around a modular architecture, focusing on clarity, flexibility, and ease of integration.
 
+<img src="assets/showcase.gif"></img>
+<br>
+“The Lighthouse” by [Cotman Sam](https://sketchfab.com/cotman_sam), used under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+
 ## Features
 
 * **Complete 3d rendering pipeline:** from model import to final pixel output, every stage of the pipeline is implemented in software
@@ -42,6 +46,15 @@ this project is a software-based 3d renderer implemented entirely in c99. it mim
 
   * `stb_image.h` for texture loading
   * `windows.h` (on windows) or `x11/xlib.h` (on linux) for windowing and input handling
+
+## Showcase
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="assets/textured.gif" style="flex: 1 1 45%; max-width: 45%; height: auto;" />
+  <img src="assets/materials.gif" style="flex: 1 1 45%; max-width: 45%; height: auto;" />
+  <img src="assets/wireframe.gif" style="flex: 1 1 45%; max-width: 45%; height: auto;" />
+  <img src="assets/normals.gif" style="flex: 1 1 45%; max-width: 45%; height: auto;" />
+</div>
 
 ## Building and Running
 

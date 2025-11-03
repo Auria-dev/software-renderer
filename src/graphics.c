@@ -182,54 +182,6 @@ void draw_line(render_context *ctx, int x0, int y0, int x1, int y1, u32 color) {
     }
 }
 
-void draw_line_depth(render_context *ctx, vec3 p0, vec3 p1, uint32_t color) {
-    const int dx = abs(p1.x - p0.x);
-    const int dy = abs(p1.y - p0.y);
-    const int sx = p0.x < p1.x ? 1 : -1;
-    const int sy = p0.y < p1.y ? 1 : -1;
-    const int steps = dx > dy ? dx : dy;
-    
-    const float rw0 = 1.0f / p0.z;
-    const float rw1 = 1.0f / p1.z;
-    float current_rw = rw0;
-    const float rw_step = (steps > 0) ? ((rw1 - rw0) * (1.0f / steps)) : 0.0f;
-    
-    const float EPSILON_OFFSET = 20.0f * EPS;
-    const int index_step_y = sy * ctx->framebuffer.width;
-    
-    int64_t dx64 = dx;
-    int64_t dy64 = dy;
-    int64_t err = dx64 - dy64;
-    int current_x = p0.x;
-    int current_y = p0.y;
-    int index = current_y * ctx->framebuffer.width + current_x;
-
-    for (int i = 0; i <= steps; ++i) {
-        if ((unsigned)current_x < (unsigned)ctx->framebuffer.width && 
-            (unsigned)current_y < (unsigned)ctx->framebuffer.height) {
-            if (current_rw + EPSILON_OFFSET >= ctx->framebuffer.depth_buffer[index]) {
-                ctx->framebuffer.depth_buffer[index] = current_rw;
-                draw_pixel(ctx, current_x, current_y, color);
-            }
-        }
-
-        if (i == steps) break;
-
-        const int64_t e2 = err * 2;
-        if (e2 > -dy64) {
-            err -= dy64;
-            current_x += sx;
-            index += sx;
-        }
-        if (e2 < dx64) {
-            err += dx64;
-            current_y += sy;
-            index += index_step_y;
-        }
-        current_rw += rw_step;
-    }
-}
-
 // helper functions
 static u32 pack_color(vec3 color) {
     // Clamp color to valid 0.0-1.0 range
@@ -297,7 +249,7 @@ void g_bind_buffer(render_context *ctx, u32 type, void *data, size_t size) {
     }
 }
 
-void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type) {
+void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type, int render_mode) {
     g_update_world_matrix(ctx, mesh->position, mesh->rotation, mesh->scale);
 
     for (int i = 0; i < mesh->submesh_count; i++) {
@@ -329,7 +281,7 @@ void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type) {
         g_bind_buffer(ctx, GBUFFER_VERTEX, mesh->vertices, mesh->vertex_count * sizeof(vertex_t));
         g_bind_buffer(ctx, GBUFFER_INDEX, sub->indices, sub->index_count * sizeof(u32));
 
-        g_draw_elements(ctx, sub->index_count, sub->indices);
+        g_draw_elements(ctx, sub->index_count, sub->indices, render_mode);
     }
 
     // unbind
@@ -337,7 +289,7 @@ void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type) {
     ctx->current_texture = NULL;
 }
 
-void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
+void g_draw_elements(render_context *ctx, u32 count, u32 *indices, int render_mode) {
     material_t* mat = ctx->current_material;
     
     material_t default_mat = {
@@ -345,12 +297,13 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
         .diffuse = {1.0f, 1.0f, 1.0f},
         .specular = {1.0f, 1.0f, 1.0f},
         .shininess = 32.0f,
-        .diffuse_map_id = -1
+        .diffuse_map_id = -1,
+        .color = 0xFFFFFFFF
     };
 
     if (!mat) {
         mat = &default_mat;
-        printf("DEBUG: g_draw_elements: using default material\n");
+        // printf("DEBUG: g_draw_elements: using default material\n");
     } 
     
     vec3 light_dir_view = vec3_normalize((vec3){0.5f, 0.5f, -1.0f});
@@ -444,6 +397,10 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
                 break;
             }
         }
+        
+        v0.color = 0xffffffff;
+        v1.color = 0xffffffff;
+        v2.color = 0xffffffff;
 
         vertex_t polygon_vertices[MAX_POLYGON_VERTICES] = {v0, v1, v2};
         int num_vertices = 3;
@@ -479,17 +436,49 @@ void g_draw_elements(render_context *ctx, u32 count, u32 *indices) {
             float screen2_x = (pv2.x * (ctx->framebuffer.width  / 2.0f)) + (ctx->framebuffer.width  / 2.0f);
             float screen2_y = (pv2.y * (ctx->framebuffer.height / 2.0f)) + (ctx->framebuffer.height / 2.0f);
 
-            // draw_line(ctx, (int)screen0_x, (int)screen0_y, (int)screen1_x, (int)screen1_y, tv0.color);
-            // draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, tv1.color);
-            // draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, tv2.color);
+            u32 material_color = mat->color;
 
-            draw_triangle(
-                ctx,
-                ctx->current_shader,
-                screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, tv0.color,
-                screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, tv1.color,
-                screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, tv2.color
-            );
+            switch (render_mode) {
+                case 0: {
+                    // textured drawing
+                    draw_triangle(
+                        ctx,
+                        ctx->current_shader,
+                        screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, tv0.color,
+                        screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, tv1.color,
+                        screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, tv2.color
+                    );
+                } break;
+                case 1: {
+                    // material color drawing
+                    draw_triangle(
+                        ctx,
+                        SHADER_SFC,
+                        screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, material_color,
+                        screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, material_color,
+                        screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, material_color
+                    );
+                } break;
+                case 2: {
+                    // wireframe drawing
+                    draw_line(ctx, (int)screen0_x, (int)screen0_y, (int)screen1_x, (int)screen1_y, material_color);
+                    draw_line(ctx, (int)screen1_x, (int)screen1_y, (int)screen2_x, (int)screen2_y, material_color);
+                    draw_line(ctx, (int)screen2_x, (int)screen2_y, (int)screen0_x, (int)screen0_y, material_color);
+                } break;
+                case 3: {
+                    // normal drawing
+                    vec3 normal_color0 = vec3_scale(vec3_add(tv0.normal, (vec3){1.0f,1.0f,1.0f}), 0.5f);
+                    vec3 normal_color1 = vec3_scale(vec3_add(tv1.normal, (vec3){1.0f,1.0f,1.0f}), 0.5f);
+                    vec3 normal_color2 = vec3_scale(vec3_add(tv2.normal, (vec3){1.0f,1.0f,1.0f}), 0.5f);
+                    draw_triangle(
+                        ctx,
+                        SHADER_SGC,
+                        screen0_x, screen0_y, pv0.w, tv0.texcoord.x, tv0.texcoord.y, pack_color(normal_color0),
+                        screen1_x, screen1_y, pv1.w, tv1.texcoord.x, tv1.texcoord.y, pack_color(normal_color1),
+                        screen2_x, screen2_y, pv2.w, tv2.texcoord.x, tv2.texcoord.y, pack_color(normal_color2)
+                    );
+                } break;
+            }
         }
     }
 }

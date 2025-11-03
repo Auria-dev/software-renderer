@@ -96,8 +96,8 @@ void g_update_world_matrix(render_context *ctx, vec3 position, vec3 rotation, ve
 void g_bind_material(render_context *ctx, int material_id);
 void g_bind_buffer(render_context *ctx, u32 type, void* data, size_t size);
 
-void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type);
-void g_draw_elements(render_context *ctx, u32 count, u32 *indices);
+void g_draw_mesh(render_context* ctx, mesh_t* mesh, int type, int render_mode);
+void g_draw_elements(render_context *ctx, u32 count, u32 *indices, int render_mode);
 
 void g_set_bilinear_sampling(render_context *ctx, bool enabled);
 

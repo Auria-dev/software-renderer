@@ -101,6 +101,11 @@ int m_create_material(material_manager_t* m, const char* name) {
             mat->shininess = 32.0f;
             mat->diffuse_map_id = -1;
 
+            mat->color =  (255 << 24) |
+                    ((128 + rand() % (256 - 128)) << 16) |
+                    ((128 + rand() % (256 - 128)) <<  8) |
+                    ( 128 + rand() % (256 - 128 )      );
+            
             printf("INFO: Created material '%s' with ID %d\n", name, i);
             return i;
         }
