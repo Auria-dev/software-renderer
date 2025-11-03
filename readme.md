@@ -1,10 +1,10 @@
 # Software Renderer
 
-this project is a software-based 3d renderer implemented entirely in c99. it mimics the functionality of a modern graphics api such as opengl, but executes fully on the cpu. the renderer is built around a modular architecture, focusing on clarity, flexibility, and ease of integration.
+This project is a software-based 3d renderer implemented entirely in C99. It mimics the functionality of a modern graphics api such as OpenGL, but runs fully on the CPU. The renderer is built around a modular architecture, focusing on flexibility and ease of integration.
 
 <img src="assets/showcase.gif"></img>
 <br>
-“The Lighthouse” by [Cotman Sam](https://sketchfab.com/cotman_sam), used under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+“The Lighthouse” by [Cotman Sam](https://sketchfab.com/cotman_sam) (used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)). 15ㅤㅤㅤㅤ,000 triangles rendered in real time at ~60FPS on the AMD Ryzen 7 5800X
 
 ## Features
 
@@ -102,4 +102,5 @@ the project includes a `makefile` for straightforward compilation.
 * **space:** move camera up
 * **left shift:** move camera down
 * **arrow keys:** rotate camera
+
 * **escape:** exit the application
